@@ -47,7 +47,7 @@ anomaly_col_map = {
 app = dash.Dash(__name__)
 app.title = "Anomalie Network Dashboard"
 
-# Nouvelle index_string avec header et footer intégrés, dans un thème sombre aux accents Nexialog
+# Nouvelle index_string avec un thème sombre complet et un header compact
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -61,8 +61,11 @@ app.index_string = '''
             html, body {
                 height: 100%;
                 margin: 0;
+                background-color: #121212;
+                color: #e0e0e0;
+                font-family: 'Segoe UI', sans-serif;
             }
-            /* Conteneur global pour footer sticky */
+            /* Conteneur global en flex column pour un footer sticky */
             .page-container {
                 display: flex;
                 flex-direction: column;
@@ -70,17 +73,14 @@ app.index_string = '''
             }
             header {
                 background-color: #1c1c1c;
-                padding: 20px;
+                padding: 10px;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.5);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                flex-wrap: wrap;
             }
             .header-left {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
+                text-align: left;
             }
             .title-row {
                 display: flex;
@@ -96,13 +96,13 @@ app.index_string = '''
                 margin-left: 20px;
             }
             .subtitle {
-                margin: 5px 0 0 0;
+                margin: 2px 0 0 0;
                 font-size: 1em;
                 color: #cccccc;
             }
             .header-right {
                 text-align: right;
-                margin-top: 10px;
+                /* Margin supprimée pour aligner verticalement */
             }
             .nav-bar {
                 display: flex;
@@ -120,8 +120,8 @@ app.index_string = '''
             }
             main {
                 flex: 1;
+                padding: 20px;
             }
-            /* Footer horizontal */
             footer {
                 background-color: #1c1c1c;
                 padding: 20px;
@@ -143,6 +143,17 @@ app.index_string = '''
             footer .git-profiles a:hover {
                 text-decoration: underline;
             }
+            /* Styles pour éléments spécifiques */
+            .highlight {
+                color: #00BCD4;
+            }
+            .card {
+                background-color: #1e1e1e;
+                border: 1px solid #2a2a2a;
+                border-radius: 4px;
+                padding: 10px;
+                margin: 10px;
+            }
         </style>
     </head>
     <body>
@@ -153,7 +164,7 @@ app.index_string = '''
                         <h1 class="title">NetworkLog</h1>
                         <img src="/assets/nexialog_logo.png" alt="Logo Nexialog" class="nexialog-logo">
                     </div>
-                    <p class="subtitle">Une solution de dédection d'anomalie réseau</p>
+                    <p class="subtitle">Une solution de détection d'anomalie réseau</p>
                 </div>
                 <div class="header-right">
                     <nav class="nav-bar">
@@ -190,7 +201,7 @@ app.index_string = '''
 </html>
 '''
 
-# Layout principal réparti en deux colonnes : sélecteur (filtres) à gauche, contenu principal à droite
+# Layout de l'application réparti en deux colonnes : le sélecteur à gauche et le contenu principal à droite
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div([
@@ -267,7 +278,7 @@ app.layout = html.Div([
                 )
             ], id="olt-visual-controls", style={"display": "none", "marginTop": "10px"})
         ], style={'width': '300px', 'float': 'left', 'padding': '10px', 'marginLeft': '20px'}),
-        # Colonne du contenu principal (fixe)
+        # Colonne du contenu principal
         html.Div(id="page-content", style={'marginLeft': '340px', 'padding': '10px'})
     ])
 ])
