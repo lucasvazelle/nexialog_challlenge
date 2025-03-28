@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, Input, Output, State, ctx
+from dash import dcc, html, Input, Output, State
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -26,6 +26,12 @@ def load_data():
 
 df = load_data()
 
+# Options pour les filtres du Journal (Boucle et Type OLT)
+boucle_options = [{'label': str(val), 'value': str(val)}
+                  for val in sorted(df["boucle"].dropna().unique())]
+olt_type_options = [{'label': str(val), 'value': str(val)}
+                    for val in sorted(df["type_olt_model"].dropna().unique())]
+
 # Dates limites
 min_date = datetime(2024, 12, 3)
 max_date = datetime(2025, 1, 31)
@@ -40,12 +46,8 @@ anomaly_col_map = {
 # Configuration de l'application Dash
 app = dash.Dash(__name__)
 app.title = "Anomalie Network Dashboard"
-external_stylesheets = [{
-    "href": "https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap",
-    "rel": "stylesheet",
-}]
 
-# Personnalisation de l'index – ici on ne surcharge que l’input du DatePickerSingle
+# Nouvelle index_string avec header et footer intégrés, dans un thème sombre aux accents Nexialog
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -54,131 +56,233 @@ app.index_string = '''
         <title>{%title%}</title>
         {%favicon%}
         {%css%}
+        <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;700&display=swap" rel="stylesheet">
         <style>
-        body {
-            margin: 0;
-            background-color: #1e1e2f;
-            color: #f0f0f0;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 220px;
-            background-color: #2b2b3d;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        .sidebar h2 {
-            color: #00bcd4;
-            font-weight: bold;
-        }
-        .sidebar a {
-            display: block;
-            color: #f0f0f0;
-            text-decoration: none;
-            margin: 10px 0;
-            font-weight: bold;
-        }
-        .sidebar a:hover {
-            color: #00bcd4;
-        }
-        .content {
-            margin-left: 240px;
-            padding: 20px;
-        }
-        .card {
-            background-color: #2c2f48;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-        }
-        .highlight {
-            color: #00bcd4;
-            font-weight: bold;
-        }
+            html, body {
+                height: 100%;
+                margin: 0;
+            }
+            /* Conteneur global pour footer sticky */
+            .page-container {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+            }
+            header {
+                background-color: #1c1c1c;
+                padding: 20px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .header-left {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .title-row {
+                display: flex;
+                align-items: center;
+            }
+            .title {
+                margin: 0;
+                font-size: 2em;
+                color: #0072CE;
+            }
+            .nexialog-logo {
+                max-height: 50px;
+                margin-left: 20px;
+            }
+            .subtitle {
+                margin: 5px 0 0 0;
+                font-size: 1em;
+                color: #cccccc;
+            }
+            .header-right {
+                text-align: right;
+                margin-top: 10px;
+            }
+            .nav-bar {
+                display: flex;
+                gap: 30px;
+                justify-content: flex-end;
+            }
+            .nav-bar a {
+                color: #e0e0e0;
+                text-decoration: none;
+                font-size: 1.2em;
+                transition: color 0.3s;
+            }
+            .nav-bar a:hover {
+                color: #0072CE;
+            }
+            main {
+                flex: 1;
+            }
+            /* Footer horizontal */
+            footer {
+                background-color: #1c1c1c;
+                padding: 20px;
+                text-align: center;
+                color: #cccccc;
+            }
+            footer .partners {
+                margin-bottom: 10px;
+            }
+            footer .partners img {
+                max-height: 40px;
+                margin: 0 10px;
+            }
+            footer .git-profiles a {
+                color: #0072CE;
+                text-decoration: none;
+                margin: 0 10px;
+            }
+            footer .git-profiles a:hover {
+                text-decoration: underline;
+            }
         </style>
     </head>
     <body>
-        <div class="sidebar">
-            <h2>📡 Dashboard</h2>
-            <a href="/dashboard" id="tab-dashboard">🚨 Alertes</a>
-            <a href="/journal" id="tab-journal">📋 Journal</a>
-            <a href="/map" id="tab-map">🗺 Carte</a>
-            <a href="/visual" id="tab-visual">📊 Visualisation</a>
+        <div class="page-container">
+            <header>
+                <div class="header-left">
+                    <div class="title-row">
+                        <h1 class="title">NetworkLog</h1>
+                        <img src="/assets/nexialog_logo.png" alt="Logo Nexialog" class="nexialog-logo">
+                    </div>
+                    <p class="subtitle">Une solution de dédection d'anomalie réseau</p>
+                </div>
+                <div class="header-right">
+                    <nav class="nav-bar">
+                        <a href="/dashboard" id="tab-dashboard">Alertes</a>
+                        <a href="/journal" id="tab-journal">Journal</a>
+                        <a href="/map" id="tab-map">Carte</a>
+                        <a href="/visual" id="tab-visual">Visualisation</a>
+                        <a href="/scenario-builder" id="tab-scenario">Scenario Builder</a>
+                        <a href="/actions" id="tab-actions">Actions</a>
+                    </nav>
+                </div>
+            </header>
+            <main>
+                {%app_entry%}
+            </main>
+            <footer>
+                <div class="partners">
+                    <strong>Partenaires :</strong>
+                    <img src="/assets/sfr_logo.png" alt="Logo SFR">
+                    <img src="/assets/mosef_logo.png" alt="Logo Mosef">
+                </div>
+                <div class="git-profiles">
+                    <a href="https://github.com/lucasvazelle" target="_blank">lucasvazelle</a> |
+                    <a href="https://github.com/Ayamokht" target="_blank">Ayamokht</a> |
+                    <a href="https://github.com/lazstx" target="_blank">lazstx</a> |
+                    <a href="https://github.com/hmnthy" target="_blank">hmnthy</a>
+                </div>
+                {%config%}
+                {%scripts%}
+                {%renderer%}
+            </footer>
         </div>
-        <div class="content">
-            {%app_entry%}
-        </div>
-        <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
-        </footer>
     </body>
 </html>
 '''
 
-# Layout de l'application
+# Layout principal réparti en deux colonnes : sélecteur (filtres) à gauche, contenu principal à droite
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div([
-        html.Label("Date", className="highlight"),
-        dcc.DatePickerSingle(
-            id='date-picker',
-            min_date_allowed=min_date.date(),
-            max_date_allowed=max_date.date(),
-            date=max_date.date(),
-            display_format='YYYY-MM-DD'
-        ),
-        html.Br(),
-        html.Label("Heure", className="highlight"),
-        dcc.Dropdown(
-            id='hour-picker',
-            options=[{"label": f"{h:02d}:00", "value": h} for h in range(24)],
-            value=datetime.now().hour,
-            clearable=False,
-            style={'color': '#00bcd4', 'backgroundColor': '#1e1e2f'}
-        ),
-        html.Br(),
-        html.Label("Période d'analyse", className="highlight"),
-        dcc.RadioItems(
-            id='hours-back',
-            options=[
-                {"label": "Heure", "value": 1},
-                {"label": "Journée", "value": 24},
-                {"label": "Semaine", "value": 168},
-                {"label": "Mois", "value": 720}
-            ],
-            value=24,
-            labelStyle={'display': 'inline-block', 'marginRight': '10px'}
-        ),
-        html.Br(),
-        html.Label("Type d'anomalie", className="highlight"),
-        dcc.RadioItems(
-            id='anomaly-type',
-            options=[{"label": k, "value": k} for k in anomaly_col_map.keys()],
-            value="DNS",
-            labelStyle={'display': 'inline-block', 'marginRight': '10px'}
-        ),
-        # Bloc pour l'onglet Visualisation (affiché uniquement sur la page /visual)
+        # Colonne des filtres (sélecteur)
         html.Div([
-            html.Label("OLT", className="highlight"),
+            html.Label("Date", className="highlight"),
+            dcc.DatePickerSingle(
+                id='date-picker',
+                min_date_allowed=min_date.date(),
+                max_date_allowed=max_date.date(),
+                date=max_date.date(),
+                display_format='YYYY-MM-DD'
+            ),
+            html.Br(),
+            html.Label("Heure", className="highlight"),
             dcc.Dropdown(
-                id='olt-picker',
-                options=[],
-                placeholder="Sélectionnez un OLT",
-                style={'color': '#00bcd4', 'backgroundColor': '#1e1e2f'}
-            )
-        ], id="olt-visual-controls", style={"display": "none", "marginTop": "10px"})
-    ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top', 'padding': '10px', 'marginLeft': '20px'}),
-    html.Div(id="page-content", style={'width': '70%', 'display': 'inline-block', 'padding': '10px'})
+                id='hour-picker',
+                options=[{"label": f"{h:02d}:00", "value": h} for h in range(24)],
+                value=datetime.now().hour,
+                clearable=False,
+                style={'color': '#0072CE', 'backgroundColor': '#1e1e1e'}
+            ),
+            html.Br(),
+            html.Label("Période d'analyse", className="highlight"),
+            dcc.RadioItems(
+                id='hours-back',
+                options=[
+                    {"label": "Heure", "value": 1},
+                    {"label": "Journée", "value": 24},
+                    {"label": "Semaine", "value": 168},
+                    {"label": "Mois", "value": 720}
+                ],
+                value=24,
+                labelStyle={'display': 'inline-block', 'marginRight': '10px'}
+            ),
+            html.Br(),
+            html.Label("Type d'anomalie", className="highlight"),
+            dcc.RadioItems(
+                id='anomaly-type',
+                options=[{"label": k, "value": k} for k in anomaly_col_map.keys()],
+                value="DNS",
+                labelStyle={'display': 'inline-block', 'marginRight': '10px'}
+            ),
+            html.Br(),
+            # Filtres supplémentaires pour le Journal
+            html.Div([
+                html.Label("Filtrer par Boucle", className="highlight"),
+                dcc.Dropdown(
+                    id='boucle-filter',
+                    options=boucle_options,
+                    placeholder="Sélectionnez une Boucle",
+                    multi=True,
+                    style={'color': '#0072CE', 'backgroundColor': '#1e1e1e'}
+                ),
+                html.Br(),
+                html.Label("Filtrer par Type OLT", className="highlight"),
+                dcc.Dropdown(
+                    id='olt-type-filter',
+                    options=olt_type_options,
+                    placeholder="Sélectionnez un Type OLT",
+                    multi=True,
+                    style={'color': '#0072CE', 'backgroundColor': '#1e1e1e'}
+                )
+            ], id="journal-filters", style={"display": "none", "marginTop": "20px"}),
+            html.Br(),
+            # Bloc pour le sélecteur OLT (affiché uniquement sur la page Visualisation)
+            html.Div([
+                html.Label("OLT", className="highlight"),
+                dcc.Dropdown(
+                    id='olt-picker',
+                    options=[],
+                    placeholder="Sélectionnez un OLT",
+                    style={'color': '#0072CE', 'backgroundColor': '#1e1e1e'}
+                )
+            ], id="olt-visual-controls", style={"display": "none", "marginTop": "10px"})
+        ], style={'width': '300px', 'float': 'left', 'padding': '10px', 'marginLeft': '20px'}),
+        # Colonne du contenu principal (fixe)
+        html.Div(id="page-content", style={'marginLeft': '340px', 'padding': '10px'})
+    ])
 ])
 
-# Callback pour mettre à jour le sélecteur OLT (uniquement sur la page Visualisation)
+# Callback pour afficher/cacher les filtres supplémentaires pour le Journal
+@app.callback(
+    Output('journal-filters', 'style'),
+    Input('url', 'pathname')
+)
+def toggle_journal_filters(pathname):
+    if pathname == '/journal':
+        return {"display": "block", "marginTop": "20px"}
+    return {"display": "none"}
+
+# Callback pour mettre à jour le sélecteur OLT (affiché uniquement sur la page Visualisation)
 @app.callback(
     Output('olt-visual-controls', 'style'),
     Output('olt-picker', 'options'),
@@ -197,7 +301,7 @@ def update_olt_selector(pathname, date_str, hour, anomaly_type):
     olts = sorted(df_hour["olt_name"].unique())
     return {"display": "block", "marginTop": "10px"}, [{'label': o, 'value': o} for o in olts]
 
-# Callback pour afficher le contenu en fonction de l'URL (page active)
+# Callback pour afficher le contenu en fonction de l'URL
 @app.callback(
     Output('page-content', 'children'),
     Input('url', 'pathname'),
@@ -205,12 +309,13 @@ def update_olt_selector(pathname, date_str, hour, anomaly_type):
     Input('hour-picker', 'value'),
     Input('hours-back', 'value'),
     Input('anomaly-type', 'value'),
-    Input('olt-picker', 'value')
+    Input('olt-picker', 'value'),
+    Input('boucle-filter', 'value'),
+    Input('olt-type-filter', 'value')
 )
-def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_olt):
-    if pathname not in ['/dashboard', '/journal', '/map', '/visual']:
+def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_olt, boucle_filter, olt_type_filter):
+    if pathname not in ['/dashboard', '/journal', '/map', '/visual', '/scenario-builder', '/actions']:
         pathname = '/dashboard'
-
     selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
     start_datetime = selected_datetime - timedelta(hours=int(hours_back))
     selected_anomaly_col = anomaly_col_map[anomaly_type]
@@ -218,10 +323,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
     if pathname == '/dashboard':
         historical_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] <= selected_datetime)].copy()
         historical_df["anomalie"] = historical_df[selected_anomaly_col]
-        # Affichage de 4 attributs
         attrs = ["code_departement", "type_olt_model", "type_boucle", "boucle"]
-
-        # Section 1 : Graphiques en camembert (pour "code_departement" et "boucle", ne garder que les 3 principales valeurs)
         pie_charts = []
         for attr in attrs:
             counts = historical_df[historical_df["anomalie"]].groupby(attr).size().reset_index(name="nb_alertes")
@@ -239,15 +341,13 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
             )
             pie_fig.update_layout(
                 margin=dict(l=10, r=10, t=30, b=10),
-                legend=dict(font_color='#f0f0f0'),
+                legend=dict(font_color='#e0e0e0'),
                 font=dict(size=10)
             )
             pie_charts.append(html.Div(
                 dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
                 style={'width': '300px', 'margin': '10px'}
             ))
-
-        # Section 2 : Détails des volumes
         volume_details = []
         for attr in attrs:
             df_attr = historical_df[historical_df["anomalie"]]
@@ -255,57 +355,52 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
             limit = 3 if attr in ["code_departement", "boucle"] else 5
             counts = df_attr.groupby(attr).size().reset_index(name="nb_alertes")
             top_items = counts.sort_values("nb_alertes", ascending=False).head(limit)
-            top_list = html.Ul([
-                html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()
-            ])
+            top_list = html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes")
+                                for _, row in top_items.iterrows()])
             volume_details.append(html.Div([
                 html.H4(attr.replace('_', ' ').title(), className="highlight"),
                 html.P(f"Volume total d'anomalies: {total_volume}", style={'fontSize': '12px'}),
                 top_list
-            ], style={
-                'backgroundColor': '#2c2f48',
-                'padding': '15px',
-                'borderRadius': '10px',
-                'margin': '10px',
-                'width': '300px'
-            }))
-
+            ], className="card", style={'width': '300px'}))
         return html.Div([
-            html.H3("🚨 Détails des volumes d'anomalies", className="highlight"),
+            html.H3("Détails des volumes d'anomalies", className="highlight"),
             html.Div(volume_details, style={"display": "flex", "flexWrap": "wrap"}),
-            html.H3("🚨 Répartition des anomalies", className="highlight"),
+            html.H3("Répartition des anomalies", className="highlight"),
             html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap"})
         ])
-
     elif pathname == '/journal':
         journal_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] < selected_datetime)]
         journal_df = journal_df[journal_df[selected_anomaly_col]]
+        if boucle_filter:
+            journal_df = journal_df[journal_df["boucle"].isin(boucle_filter)]
+        if olt_type_filter:
+            journal_df = journal_df[journal_df["type_olt_model"].isin(olt_type_filter)]
         journal_df = journal_df.sort_values("date_hour", ascending=False)
-        friendly_columns = [{"name": col.replace("is_jump", "anomalie").replace("_", " ").title(), "id": col} for col in journal_df.columns]
+        friendly_columns = [{"name": col.replace("is_jump", "anomalie").replace("_", " ").title(), "id": col}
+                            for col in journal_df.columns]
         buffer = io.StringIO()
         journal_df.to_csv(buffer, index=False)
         csv_data = base64.b64encode(buffer.getvalue().encode()).decode()
         download_link = html.A(
-            "⬇️ Exporter en CSV",
+            "Exporter en CSV",
             href=f"data:text/csv;base64,{csv_data}",
             download="journal_anomalies.csv",
-            style={"marginTop": "10px", "display": "inline-block", "color": "#00bcd4", "fontWeight": "bold"}
+            className="export-link"
         )
         return html.Div([
-            html.H3("📋 Journal des anomalies", className="highlight"),
+            html.H3("Journal des anomalies", className="highlight"),
             dash.dash_table.DataTable(
                 data=journal_df.to_dict("records"),
                 columns=friendly_columns,
-                style_table={'overflowX': 'auto'},
+                style_table={'overflowY': 'auto', 'height': 'calc(100vh - 200px)'},
                 page_size=20,
                 filter_action="native",
                 sort_action="native",
-                style_header={'backgroundColor': '#2c2f48', 'color': '#f0f0f0', 'fontWeight': 'bold'},
-                style_cell={'backgroundColor': '#1e1e2f', 'color': '#f0f0f0'}
+                style_header={'backgroundColor': '#2a2a2a', 'color': '#e0e0e0', 'fontWeight': 'bold'},
+                style_cell={'backgroundColor': '#1e1e1e', 'color': '#e0e0e0'}
             ),
             download_link
         ])
-
     elif pathname == '/map':
         historical_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] <= selected_datetime)].copy()
         historical_df["anomalie"] = historical_df[selected_anomaly_col]
@@ -331,13 +426,12 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
         )
         fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
         return html.Div([
-            html.H3("🗺 Carte des anomalies", className="highlight"),
-            dcc.Graph(figure=fig_map)
+            html.H3("Carte des anomalies", className="highlight"),
+            dcc.Graph(figure=fig_map, style={'width': '100%', 'height': '600px'})
         ])
-
     elif pathname == '/visual':
         if not selected_olt:
-            return html.Div([html.H4("📊 Visualisation", className="highlight"), html.P("Veuillez sélectionner un OLT")])
+            return html.Div([html.H4("Visualisation", className="highlight"), html.P("Veuillez sélectionner un OLT")])
         visual_start = selected_datetime - timedelta(hours=int(hours_back))
         olt_df = df[(df["olt_name"] == selected_olt) & (df["date_hour"] >= visual_start) & (df["date_hour"] <= selected_datetime)].sort_values("date_hour")
         y_col = "avg_dns_time"
@@ -362,18 +456,27 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
             name="Anomalies"
         )
         fig_ts.update_layout(
-            paper_bgcolor="#1e1e2f",
-            plot_bgcolor="#2c2f48",
-            font_color="#f0f0f0",
+            paper_bgcolor="#121212",
+            plot_bgcolor="#1e1e1e",
+            font_color="#e0e0e0",
             margin={"l": 40, "r": 40, "t": 60, "b": 40},
             xaxis_title="Date et Heure",
             yaxis_title="Moyenne de la métrique"
         )
         return html.Div([
-            html.H3("📊 Visualisation OLT", className="highlight"),
-            dcc.Graph(figure=fig_ts)
+            html.H3("Visualisation OLT", className="highlight"),
+            dcc.Graph(figure=fig_ts, style={'width': '100%', 'height': '600px'})
         ])
-
+    elif pathname == '/scenario-builder':
+        return html.Div([
+            html.H3("Scenario Builder", className="highlight"),
+            html.P("Ici vous pourrez créer et sauvegarder des scénarios de simulation d'anomalies. (Fonctionnalités à implémenter)")
+        ])
+    elif pathname == '/actions':
+        return html.Div([
+            html.H3("Actions", className="highlight"),
+            html.P("Cette page permettra de lancer des actions correctives ou des scripts automatisés suite à des alertes. (Fonctionnalités à implémenter)")
+        ])
     return html.Div(["Page non reconnue"])
 
 if __name__ == '__main__':
