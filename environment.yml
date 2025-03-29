@@ -1,0 +1,16 @@
+name: dash_env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas
+  - pyarrow
+  - pyspark
+  - streamlit
+  - plotly
+  - geopandas
+  - shapely
+  - numpy<2
+
+
+
