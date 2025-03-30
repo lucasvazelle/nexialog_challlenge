@@ -93,7 +93,7 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
                 font=dict(color='#E2E8F0', size=11)
             ),
             title=dict(
-                font=dict(size=16, color='#38BDF8'),
+                font=dict(size=16, color='#60A5FA'),
                 x=0.5
             ),
             paper_bgcolor='#1E293B',
@@ -130,7 +130,7 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
     trend_fig.update_layout(
         margin=dict(l=10, r=10, t=50, b=30),
         title=dict(
-            font=dict(size=16, color='#38BDF8'),
+            font=dict(size=16, color='#60A5FA'),
             x=0.5
         ),
         paper_bgcolor='#1E293B',
@@ -156,19 +156,20 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
     )
     
     return html.Div([
-        html.H2("Tableau de bord des anomalies", className="highlight", style={"marginTop": "0"}),
+        html.H2("Tableau de bord des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
         trend_chart,
-        html.H3("Répartition des anomalies", className="highlight"),
+        html.H3("Répartition des anomalies", className="section-title"),
         html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap", "justifyContent": "space-between"})
     ])
+
 
 def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     if not selected_olt:
         return html.Div([
-            html.H2("Visualisation OLT", className="highlight", style={"marginTop": "0"}),
+            html.H2("Visualisation OLT", className="page-title", style={"marginTop": "0"}),
             html.Div([
-                html.P("Veuillez sélectionner un OLT pour afficher les données", style={"color": "#94A3B8"}),
+                html.P("Veuillez sélectionner un OLT pour afficher les données", style={"color": "#CBD5E1"}),
                 html.Div(html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}), 
                          style={"textAlign": "center", "margin": "40px 0"})
             ], style={"textAlign": "center", "padding": "40px"}, className="card")
@@ -277,7 +278,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     fig_ts.update_layout(
         title=dict(
             text=f"Évolution de {metric_name} pour l'OLT {selected_olt}",
-            font=dict(size=16, color='#38BDF8'),
+            font=dict(size=16, color='#60A5FA'),
             x=0.5
         ),
         paper_bgcolor="#1E293B",
@@ -333,7 +334,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         yaxis_title="Fréquence",
         height=300,
         title=dict(
-            font=dict(size=16, color='#38BDF8'),
+            font=dict(size=16, color='#60A5FA'),
             x=0.5
         )
     )
@@ -361,7 +362,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         yaxis_title="Taux d'anomalies",
         height=300,
         title=dict(
-            font=dict(size=16, color='#38BDF8'),
+            font=dict(size=16, color='#60A5FA'),
             x=0.5
         )
     )
@@ -372,17 +373,17 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     
     # Création d'un résumé statistique
     summary_card = html.Div([
-        html.H3("Résumé statistique", className="highlight"),
+        html.H3("Résumé statistique", className="section-title"),
         html.Div([
             html.P(f"• Taux d'anomalies: {anomaly_perc:.1f}% des mesures"),
             html.P(f"• Pic d'anomalies: {peak_time}"),
             html.P(f"• Valeur moyenne: {avg_value:.2f}"),
             html.P(f"• Écart maximal: {(max_value - avg_value):.2f} ({(max_value/avg_value - 1)*100:.1f}% au-dessus de la moyenne)")
-        ], style={'color': '#94A3B8'})
+        ], style={'color': '#CBD5E1'})
     ], className="card", style={"width": "100%", "marginTop": "20px"})
     
     return html.Div([
-        html.H2("Visualisation OLT", className="highlight", style={"marginTop": "0"}),
+        html.H2("Visualisation OLT", className="page-title", style={"marginTop": "0"}),
         stats_cards,
         html.Div([
             dcc.Graph(figure=fig_ts, config={'displayModeBar': 'hover'}),
@@ -476,7 +477,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
     table_body = [html.Tbody(table_rows)]
     
     table = html.Div([
-        html.H3("Top 10 des départements", className="highlight"),
+        html.H3("Top 10 des départements", className="section-title"),
         html.Table(table_header + table_body, style={
             "width": "100%",
             "borderCollapse": "collapse",
@@ -485,7 +486,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
     ], className="card", style={"marginTop": "20px"})
     
     return html.Div([
-        html.H2("Carte des anomalies par département", className="highlight", style={"marginTop": "0"}),
+        html.H2("Carte des anomalies par département", className="page-title", style={"marginTop": "0"}),
         stats_cards,
         html.Div([
             dcc.Graph(figure=fig_map, style={'width': '100%', 'height': '600px'})
@@ -563,8 +564,7 @@ def create_journal_content(journal_df, selected_anomaly_col):
     # Préparer le CSV pour export
     buffer = io.StringIO()
     journal_df.to_csv(buffer, index=False)
-    csv_data = base64.b64encode(buffer.getvalue().encode()).decode()
-    
+    csv_data = base64
     # Bouton d'export amélioré
     download_link = html.A(
         html.Div([
@@ -578,7 +578,7 @@ def create_journal_content(journal_df, selected_anomaly_col):
     )
     
     return html.Div([
-        html.H2("Journal des anomalies", className="highlight", style={"marginTop": "0"}),
+        html.H2("Journal des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
         html.Div([
             dash.dash_table.DataTable(
@@ -626,10 +626,6 @@ def create_journal_content(journal_df, selected_anomaly_col):
 app = dash.Dash(__name__)
 app.title = "Anomalie Network Dashboard"
 
-# Nouvelle index_string avec un thème sombre complet et un header compact
-# Ajouter ce code dans votre fichier app_dash.py
-# Remplacer la section style de l'index_string par celle-ci
-
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -639,6 +635,7 @@ app.index_string = '''
         {%favicon%}
         {%css%}
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
         <style>
             html, body {
                 height: 100%;
@@ -671,10 +668,11 @@ app.index_string = '''
             }
             .title {
                 margin: 0;
-                font-size: 2em;
-                font-weight: 700;
-                color: #38BDF8;
+                font-size: 2.2em;
+                font-weight: 800;
+                color: #60A5FA;
                 letter-spacing: -0.5px;
+                text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
             }
             .nexialog-logo {
                 max-height: 40px;
@@ -690,36 +688,37 @@ app.index_string = '''
             .header-right {
                 text-align: right;
             }
+            
+            /* Style des onglets amélioré */
             .nav-bar {
                 display: flex;
-                gap: 30px;
+                gap: 5px;
                 justify-content: flex-end;
             }
             .nav-bar a {
                 color: #CBD5E1;
                 text-decoration: none;
                 font-size: 1.05em;
-                font-weight: 500;
-                transition: all 0.3s;
+                font-weight: 600;
+                transition: all 0.2s;
+                padding: 10px 20px;
+                border-radius: 8px 8px 0 0;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
                 position: relative;
-                padding: 5px 0;
             }
+            /* Effet au survol */
             .nav-bar a:hover {
                 color: #38BDF8;
+                background-color: rgba(15, 23, 42, 0.3);
             }
-            .nav-bar a:after {
-                content: '';
-                position: absolute;
-                width: 0;
-                height: 2px;
-                bottom: 0;
-                left: 0;
-                background-color: #38BDF8;
-                transition: width 0.3s;
+            /* Style pour l'onglet actif - similaire à votre capture d'écran */
+            .nav-bar a.active {
+                color: #38BDF8;
+                background-color: #0F172A;
+                border-bottom: 3px solid #38BDF8;
             }
-            .nav-bar a:hover:after {
-                width: 100%;
-            }
+            
             main {
                 flex: 1;
                 padding: 30px;
@@ -764,13 +763,36 @@ app.index_string = '''
                 color: #38BDF8;
                 text-decoration: underline;
             }
+            
             /* Styles pour éléments spécifiques */
             .highlight {
-                color: #38BDF8;
+                color: #60A5FA;
                 font-weight: 600;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
                 margin-top: 20px;
             }
+            /* AMÉLIORATION TITRES */
+            .page-title {
+                color: #60A5FA;
+                font-size: 1.8em;
+                font-weight: 700;
+                margin-top: 0;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #334155;
+                padding-bottom: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .section-title {
+                color: #60A5FA;
+                font-size: 1.3em;
+                font-weight: 600;
+                margin-top: 20px;
+                margin-bottom: 15px;
+                padding-bottom: 5px;
+                border-bottom: 1px solid #334155;
+            }
+            
             .card {
                 background-color: #1E293B;
                 border: 1px solid #334155;
@@ -784,9 +806,28 @@ app.index_string = '''
                 transform: translateY(-3px);
                 box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
             }
+            
+            /* AMÉLIORATION CARTES STATISTIQUES */
+            .card h2 {
+                font-size: 2.5rem;
+                font-weight: 700;
+                margin: 0;
+                color: #38BDF8;
+                text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+            }
+            .card h3 {
+                color: #94A3B8;
+                font-size: 1rem;
+                font-weight: 500;
+                margin: 0;
+            }
+            .card p {
+                color: #CBD5E1;
+            }
+            
             /* Styles pour les contrôles */
             .Select-control, .Select-menu-outer {
-                background-color: #1E293B !important;
+                background-color: #0F172A !important;
                 color: #E2E8F0 !important;
                 border: 1px solid #475569 !important;
                 border-radius: 6px !important;
@@ -795,62 +836,387 @@ app.index_string = '''
                 color: #E2E8F0 !important;
             }
             .Select-menu-outer {
-                background-color: #1E293B !important;
+                background-color: #0F172A !important;
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
             }
             .Select-option {
-                background-color: #1E293B !important;
+                background-color: #0F172A !important;
                 color: #E2E8F0 !important;
             }
             .Select-option.is-focused {
                 background-color: #2D3D50 !important;
             }
             .DateInput, .SingleDatePickerInput {
-                background-color: #1E293B !important;
+                background-color: #0F172A !important;
                 border: 1px solid #475569 !important;
                 border-radius: 6px !important;
             }
             .DateInput_input {
                 color: #E2E8F0 !important;
-                background-color: #1E293B !important;
+                background-color: #0F172A !important;
                 font-family: 'Inter', sans-serif !important;
             }
-            input[type="radio"], input[type="checkbox"] {
+            
+            /* AMÉLIORATION BOUTONS RADIO */
+            input[type="radio"] {
                 accent-color: #38BDF8;
-                margin-right: 5px;
+                width: 18px;
+                height: 18px;
+                margin-right: 8px;
             }
-            label {
-                display: block;
-                margin-bottom: 8px;
+            .radio-label {
+                display: flex;
+                align-items: center;
+                margin-bottom: 10px;
+                color: #CBD5E1;
                 font-weight: 500;
-            }
-            .export-link {
-                display: inline-block;
-                margin-top: 15px;
-                padding: 8px 16px;
-                background-color: #38BDF8;
-                color: #0F172A;
-                text-decoration: none;
-                border-radius: 6px;
-                font-weight: 600;
-                transition: background-color 0.3s;
-            }
-            .export-link:hover {
-                background-color: #0EA5E9;
-            }
-            /* Styliser les filtres latéraux */
-            .filter-section {
-                background-color: #1E293B;
-                border-radius: 8px;
-                padding: 20px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
-                border: 1px solid #334155;
+                cursor: pointer;
             }
         </style>
     </head>
-    <body>
-        <div class="page-container">
+    <style>
+    /* Amélioration du volet de filtres */
+    .left-panel-title {
+        color: #60A5FA;
+        font-size: 1.5em;
+        font-weight: 700;
+        margin-bottom: 20px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-bottom: 2px solid #38BDF8;
+        padding-bottom: 8px;
+    }
+    
+    /* Catégories de filtres */
+    .filter-category {
+        color: #38BDF8;
+        font-size: 1.2em;
+        font-weight: 600;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Amélioration radio buttons et labels */
+    .radio-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        transition: transform 0.2s;
+        cursor: pointer;
+    }
+    
+    .radio-item:hover {
+        transform: translateX(5px);
+    }
+    
+    .radio-item input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 10px;
+        cursor: pointer;
+        accent-color: #60A5FA;
+    }
+    
+    .radio-item label {
+        color: #CBD5E1;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    
+    /* Style spécial pour l'option sélectionnée */
+    .radio-item input[type="radio"]:checked + label {
+        color: #FFFFFF;
+        font-weight: 600;
+    }
+    
+    /* Ajouter un fond distinct au volet gauche */
+    .filter-panel {
+        background-color: #111827;
+        border-radius: 10px;
+        border: 1px solid #1E293B;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+    }
+    
+    /* Style pour les dropdowns */
+    .filter-dropdown {
+        margin-bottom: 15px;
+    }
+    
+    .filter-dropdown-label {
+        color: #CBD5E1;
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    /* Amélioration des éléments de date */
+    .date-picker-container {
+        margin-bottom: 20px;
+    }
+    
+    .date-help-text {
+        color: #94A3B8;
+        font-size: 0.85em;
+        font-style: italic;
+        margin-top: 5px;
+    }
+    
+    /* Ajouter une bordure distinctive sur les entrées */
+    .DateInput {
+        border: 1px solid #38BDF8 !important;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #CBD5E1;
+    }
+    .export-link {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 15px;
+        padding: 10px 18px;
+        background-color: #38BDF8;
+        color: #0F172A;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .export-link:hover {
+        background-color: #0EA5E9;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* AMÉLIORATION ZONE DE FILTRES */
+    .filter-section {
+        background-color: #111827;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        border: 1px solid #334155;
+    }
+    .filter-section h3 {
+        color: #60A5FA;
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-top: 0;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #334155;
+        padding-bottom: 8px;
+        text-transform: uppercase;
+    }
+    
+    /* Styles pour améliorer la sélection OLT */
+    
+    /* Zone principale de visualisation avec un appel à l'action */
+    .visualization-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #0F172A;
+        border-radius: 10px;
+        border: 1px solid #334155;
+        padding: 40px;
+        text-align: center;
+        height: 400px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .visualization-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at center, rgba(56, 189, 248, 0.05) 0%, rgba(15, 23, 42, 0) 70%);
+        z-index: 0;
+    }
+    
+    .selection-prompt {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .selection-title {
+        color: #60A5FA;
+        font-size: 1.8em;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+    
+    .selection-description {
+        color: #94A3B8;
+        font-size: 1.1em;
+        margin-bottom: 30px;
+        max-width: 600px;
+    }
+    
+    /* Bouton pour diriger l'attention vers le sélecteur */
+    .selection-button {
+        background-color: #38BDF8;
+        color: #0F172A;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .selection-button:hover {
+        background-color: #0EA5E9;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Animation pulsante pour attirer l'attention vers le menu de sélection */
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(56, 189, 248, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+        }
+    }
+    
+    /* Améliorations pour le dropdown de sélection OLT */
+    .olt-selection-dropdown {
+        width: 100%;
+        animation: pulse 2s infinite;
+    }
+    
+    .olt-selection-container {
+        background-color: #1E293B;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+        border: 1px solid #38BDF8;
+        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);
+    }
+    
+    .highlight-selector {
+        animation: pulse 2s infinite;
+    }
+    
+    .olt-selection-title {
+        color: #38BDF8;
+        font-size: 1.3em;
+        font-weight: 700;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .olt-category {
+        color: #CBD5E1;
+        font-size: 1.1em;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    /* Indications visuelles pour les OLTs disponibles */
+    .olt-count {
+        display: inline-block;
+        background-color: #38BDF8;
+        color: #0F172A;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        margin-left: 10px;
+    }
+    
+    /* Tooltip d'aide pour guider l'utilisateur */
+    .tooltip-container {
+        position: relative;
+        display: inline-block;
+        margin-left: 10px;
+    }
+    
+    .tooltip-icon {
+        color: #60A5FA;
+        cursor: pointer;
+        font-size: 0.9em;
+    }
+    
+    .tooltip-text {
+        visibility: hidden;
+        width: 250px;
+        background-color: #1E293B;
+        color: #CBD5E1;
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid #334155;
+        font-size: 0.9em;
+        font-weight: normal;
+        text-transform: none;
+        letter-spacing: normal;
+    }
+    
+    .tooltip-container:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    /* Table header improvements */
+    .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+        background-color: #0F172A !important;
+        color: #60A5FA !important;
+        font-weight: 700 !important;
+        padding: 12px 10px !important;
+        border-bottom: 2px solid #334155 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 1200px) {
+        .nav-bar {
+            gap: 10px;
+        }
+        
+        .nav-bar a {
+            font-size: 0.8em;
+            padding: 8px 10px;
+        }
+    }
+    @media (max-width: 768px) {
+        .nav-bar {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+    }
+</style>
+    <div class="page-container">
             <header>
                 <div class="header-left">
                     <div class="title-row">
@@ -861,12 +1227,12 @@ app.index_string = '''
                 </div>
                 <div class="header-right">
                     <nav class="nav-bar">
-                        <a href="/dashboard" id="tab-dashboard">Alertes</a>
-                        <a href="/journal" id="tab-journal">Journal</a>
-                        <a href="/map" id="tab-map">Carte</a>
-                        <a href="/visual" id="tab-visual">Visualisation</a>
-                        <a href="/scenario-builder" id="tab-scenario">Scenario Builder</a>
-                        <a href="/actions" id="tab-actions">Actions</a>
+                        <a href="/dashboard" id="tab-dashboard">ALERTES</a>
+                        <a href="/journal" id="tab-journal">JOURNAL</a>
+                        <a href="/map" id="tab-map">CARTE</a>
+                        <a href="/visual" id="tab-visual">VISUALISATION</a>
+                        <a href="/scenario-builder" id="tab-scenario">SCENARIO</a>
+                        <a href="/actions" id="tab-actions">ACTIONS</a>
                     </nav>
                 </div>
             </header>
@@ -888,21 +1254,123 @@ app.index_string = '''
                 {%config%}
                 {%scripts%}
                 {%renderer%}
+                <script>
+                    // Script pour gérer les onglets actifs
+                    function updateActiveTab() {
+                        // Obtenir le chemin actuel
+                        const pathname = window.location.pathname || '/dashboard';
+                        
+                        // Retirer la classe active de tous les onglets
+                        document.querySelectorAll('.nav-bar a').forEach(tab => {
+                            tab.classList.remove('active');
+                        });
+                        
+                        // Trouver l'onglet qui correspond au chemin actuel
+                        let tabId = '';
+                        
+                        // Gérer le cas de la route par défaut
+                        if (pathname === '/' || pathname === '') {
+                            tabId = 'tab-dashboard';
+                        } else {
+                            // Extraire l'id de l'onglet à partir du chemin
+                            const route = pathname.split('/')[1];
+                            tabId = route ? `tab-${route}` : 'tab-dashboard';
+                        }
+                        
+                        // Ajouter la classe active à l'onglet actuel
+                        const activeTab = document.getElementById(tabId);
+                        if (activeTab) {
+                            activeTab.classList.add('active');
+                        }
+                    }
+
+                    // Exécuter cette fonction au chargement de la page
+                    document.addEventListener('DOMContentLoaded', function() {
+                        updateActiveTab();
+                        
+                        // Observer les changements dans le contenu pour mettre à jour l'onglet actif
+                        const observer = new MutationObserver(function(mutations) {
+                            updateActiveTab();
+                        });
+                        
+                        // Observer les changements dans la zone de contenu principale
+                        const mainContent = document.getElementById('page-content');
+                        if (mainContent) {
+                            observer.observe(mainContent, { childList: true });
+                        }
+                        
+                        // Gérer le click sur le bouton de sélection OLT
+                        document.addEventListener('click', function(e) {
+                            if (e.target.id === 'select-olt-btn' || e.target.closest('#select-olt-btn')) {
+                                const oltSelector = document.getElementById('olt-visual-controls');
+                                if (oltSelector) {
+                                    oltSelector.classList.add('highlight-selector');
+                                    // Scroller vers le sélecteur OLT
+                                    oltSelector.scrollIntoView({ behavior: 'smooth' });
+                                    
+                                    // Retirer l'effet de highlight après quelques secondes
+                                    setTimeout(function() {
+                                        oltSelector.classList.remove('highlight-selector');
+                                    }, 3000);
+                                }
+                            }
+                        });
+                        
+                        // Amélioration des boutons radio pour la visualisation
+                        document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
+                            // Trouver le label associé au radio
+                            const label = document.querySelector(`label[for="${radio.id}"]`) || 
+                                         radio.nextElementSibling;
+                                         
+                            if (label) {
+                                // Créer un wrapper div
+                                const wrapper = document.createElement('div');
+                                wrapper.className = 'radio-item';
+                                
+                                // Placer le radio et son label dans le wrapper
+                                const radioParent = radio.parentNode;
+                                radioParent.insertBefore(wrapper, radio);
+                                wrapper.appendChild(radio);
+                                wrapper.appendChild(label);
+                                
+                                // Ajouter un event listener pour highlight
+                                radio.addEventListener('change', function() {
+                                    // Retirer highlight de tous les radios du même groupe
+                                    document.querySelectorAll(`input[name="${radio.name}"]`).forEach(function(r) {
+                                        const rWrapper = r.closest('.radio-item');
+                                        if (rWrapper) {
+                                            rWrapper.classList.remove('selected');
+                                        }
+                                    });
+                                    
+                                    // Ajouter highlight au radio sélectionné
+                                    wrapper.classList.add('selected');
+                                });
+                                
+                                // Appliquer highlight initial si déjà sélectionné
+                                if (radio.checked) {
+                                    wrapper.classList.add('selected');
+                                }
+                            }
+                        });
+                    });
+                </script>
             </footer>
         </div>
     </body>
 </html>
 '''
 
-# Modifier le layout de l'application pour améliorer la présentation des filtres
+# Maintenant, modifiez votre app.layout pour utiliser les nouvelles classes :
+
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div([
-        # Colonne des filtres (sélecteur)
+        # Colonne des filtres avec sélection OLT intégrée
         html.Div([
             html.Div([
-                html.H3("Filtres", className="highlight", style={"marginTop": "0"}),
-                html.Label("Date", className="highlight"),
+                html.H3("FILTRES", className="left-panel-title", style={"marginTop": "0"}),
+                html.H4("Date", className="filter-category"),
                 html.Div([
                     dcc.DatePickerSingle(
                         id='date-picker',
@@ -915,20 +1383,21 @@ app.layout = html.Div([
                     ),
                     html.Small(
                         "Données disponibles du 3 déc. 2024 au 31 jan. 2025",
-                        style={'color': '#94A3B8', 'fontStyle': 'italic', 'marginTop': '5px', 'display': 'block'}
+                        className="date-help-text"
                     )
-                ]),
-                html.Br(),
-                html.Label("Heure", className="highlight"),
-                dcc.Dropdown(
-                    id='hour-picker',
-                    options=[{"label": f"{h:02d}:00", "value": h} for h in range(24)],
-                    value=datetime.now().hour,
-                    clearable=False,
-                    style={'color': '#E2E8F0', 'backgroundColor': '#1E293B'}
-                ),
-                html.Br(),
-                html.Label("Période d'analyse", className="highlight"),
+                ], className="date-picker-container"),
+                
+                html.H4("Heure", className="filter-category"),
+                html.Div([
+                    dcc.Dropdown(
+                        id='hour-picker',
+                        options=[{"label": f"{h:02d}:00", "value": h} for h in range(24)],
+                        value=datetime.now().hour,
+                        clearable=False
+                    )
+                ], className="filter-dropdown"),
+                
+                html.H4("Période d'analyse", className="filter-category"),
                 dcc.RadioItems(
                     id='hours-back',
                     options=[
@@ -938,49 +1407,58 @@ app.layout = html.Div([
                         {"label": "Mois", "value": 720}
                     ],
                     value=24,
-                    labelStyle={'display': 'block', 'marginBottom': '8px', 'cursor': 'pointer'}
+                    className="radio-group",
+                    inputClassName="radio-input",
+                    labelClassName="radio-label",
+                    labelStyle={'display': 'inline-block'}
                 ),
-                html.Br(),
-                html.Label("Type d'anomalie", className="highlight"),
+                
+                html.H4("Type d'anomalie", className="filter-category"),
                 dcc.RadioItems(
                     id='anomaly-type',
                     options=[{"label": k, "value": k} for k in anomaly_col_map.keys()],
                     value="DNS",
-                    labelStyle={'display': 'block', 'marginBottom': '8px', 'cursor': 'pointer'}
+                    className="radio-group",
+                    inputClassName="radio-input",
+                    labelClassName="radio-label",
+                    labelStyle={'display': 'inline-block'}
                 ),
-            ], className="filter-section"),
-            # Filtres supplémentaires pour le Journal
+            ], className="filter-panel"),
+            
+            # Filtres supplémentaires pour le Journal (conserver cette partie mais ajouter les classes)
             html.Div([
-                html.H3("Filtres avancés", className="highlight", style={"marginTop": "0"}),
-                html.Label("Filtrer par Boucle", className="highlight"),
+                html.H3("Filtres avancés", className="left-panel-title", style={"marginTop": "20px"}),
+                html.H4("Filtrer par Boucle", className="filter-category"),
                 dcc.Dropdown(
                     id='boucle-filter',
                     options=boucle_options,
                     placeholder="Sélectionnez une Boucle",
                     multi=True,
-                    style={'color': '#E2E8F0', 'backgroundColor': '#1E293B', 'marginBottom': '15px'}
+                    className="filter-dropdown"
                 ),
-                html.Label("Filtrer par Type OLT", className="highlight"),
+                html.H4("Filtrer par Type OLT", className="filter-category"),
                 dcc.Dropdown(
                     id='olt-type-filter',
                     options=olt_type_options,
                     placeholder="Sélectionnez un Type OLT",
                     multi=True,
-                    style={'color': '#E2E8F0', 'backgroundColor': '#1E293B'}
+                    className="filter-dropdown"
                 )
-            ], id="journal-filters", style={"display": "none"}, className="filter-section"),
+            ], id="journal-filters", style={"display": "none"}, className="filter-panel"),
+            
             # Bloc pour le sélecteur OLT (affiché uniquement sur la page Visualisation)
             html.Div([
-                html.H3("Sélection OLT", className="highlight", style={"marginTop": "0"}),
-                html.Label("OLT", className="highlight"),
+                html.H3("Sélection OLT", className="left-panel-title", style={"marginTop": "20px"}),
+                html.H4("OLT", className="filter-category"),
                 dcc.Dropdown(
                     id='olt-picker',
                     options=[],
                     placeholder="Sélectionnez un OLT",
-                    style={'color': '#E2E8F0', 'backgroundColor': '#1E293B'}
+                    className="filter-dropdown"
                 )
-            ], id="olt-visual-controls", style={"display": "none"}, className="filter-section")
+            ], id="olt-visual-controls", style={"display": "none"}, className="filter-panel")
         ], style={'width': '320px', 'float': 'left'}),
+        
         # Colonne du contenu principal
         html.Div(id="page-content", style={
             'marginLeft': '350px', 
