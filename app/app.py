@@ -10,10 +10,13 @@ import dash.dash_table
 import io
 import base64
 
-# 2. Chargement des données
-def load_data():
-    df = pd.read_parquet("../data/data_with_anomalies_with_jump_model.parquet")
-    df["date_hour"] = pd.to_datetime(df["date_hour"])
+# 2. Chargement des données depuis les deux sources
+def load_data_sources():
+    # Charger les deux fichiers Parquet
+    df_olt = pd.read_parquet("../data/data_with_anomalies_with_jump_model.parquet")
+    df_peag = pd.read_parquet("../data/data_with_anomalies_PEAG_with_jump_model.parquet")
+    
+    # Liste des colonnes à retirer
     columns_to_drop = [
         "missing_avg_dns_time", "missing_std_dns_time",
         "missing_avg_latence_scoring", "missing_std_latence_scoring",
@@ -21,16 +24,27 @@ def load_data():
         "encodage_heure_sin", "encodage_heure_cos",
         "encodage_jour_semaine_sin", "encodage_jour_semaine_cos"
     ]
-    df = df.drop(columns=[col for col in columns_to_drop if col in df.columns], errors="ignore")
-    return df
+    
+    for df in [df_olt, df_peag]:
+        df["date_hour"] = pd.to_datetime(df["date_hour"])
+        df.drop(columns=[col for col in columns_to_drop if col in df.columns], errors="ignore", inplace=True)
 
-df = load_data()
+    df_peag = df_peag.drop(columns=['olt_name'], errors='ignore').rename(columns={'peag_nro': 'olt_name'})
 
-# 3. Options pour les filtres
+
+    # Concaténer les deux DataFrames
+    df_both = pd.concat([df_olt, df_peag], ignore_index=True)
+
+    return {"OLT": df_olt, "PEAG": df_peag, "OLT+PEAG": df_both}
+
+# Charger les sources et définir la source par défaut
+data_sources = load_data_sources()
+
+# 3. Options pour les filtres (basées sur la table OLT par défaut)
 boucle_options = [{'label': str(val), 'value': str(val)}
-                  for val in sorted(df["boucle"].dropna().unique())]
+                  for val in sorted(data_sources["OLT"]["boucle"].dropna().unique())]
 olt_type_options = [{'label': str(val), 'value': str(val)}
-                    for val in sorted(df["type_olt_model"].dropna().unique())]
+                    for val in sorted(data_sources["OLT"]["type_olt_model"].dropna().unique())]
 
 # 4. Dates limites
 min_date = datetime(2024, 12, 3)
@@ -47,11 +61,11 @@ anomaly_col_map = {
 def create_dashboard_content(historical_df, selected_anomaly_col):
     historical_df["anomalie"] = historical_df[selected_anomaly_col]
     attrs = ["code_departement", "type_olt_model", "type_boucle", "boucle"]
-    
+
     # Statistiques globales
     total_anomalies = historical_df[historical_df["anomalie"]].shape[0]
     total_olts = historical_df[historical_df["anomalie"]]["olt_name"].nunique()
-    
+
     stats_cards = html.Div([
         html.Div([
             html.H2(f"{total_anomalies}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
@@ -62,16 +76,12 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
             html.P("OLTs affectés", style={"margin": "0", "color": "#94A3B8"})
         ], className="card", style={"textAlign": "center", "width": "200px"})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
-    
-    # Créer des graphiques améliorés
+
+    # Création des graphiques en secteurs
     pie_charts = []
     for attr in attrs:
         counts = historical_df[historical_df["anomalie"]].groupby(attr).size().reset_index(name="nb_alertes")
-        if attr in ["code_departement", "boucle"]:
-            counts = counts.sort_values("nb_alertes", ascending=False).head(5)
-        else:
-            counts = counts.sort_values("nb_alertes", ascending=False).head(5)
-        
+        counts = counts.sort_values("nb_alertes", ascending=False).head(5)
         pie_fig = px.pie(
             counts,
             names=attr,
@@ -81,7 +91,6 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
             template="plotly_dark",
             color_discrete_sequence=px.colors.sequential.Blues_r
         )
-        
         pie_fig.update_layout(
             margin=dict(l=10, r=10, t=50, b=10),
             legend=dict(
@@ -100,33 +109,30 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
             plot_bgcolor='#1E293B',
             font=dict(color='#E2E8F0')
         )
-        
         pie_charts.append(html.Div(
             dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
             className="card",
             style={'width': 'calc(50% - 30px)', 'margin': '10px'}
         ))
-    
+
     # Tendance temporelle des anomalies
     time_trend = historical_df[historical_df["anomalie"]].groupby(
         pd.Grouper(key='date_hour', freq='D')
     ).size().reset_index(name='count')
-    
+
     trend_fig = px.line(
-        time_trend, 
-        x='date_hour', 
+        time_trend,
+        x='date_hour',
         y='count',
         template="plotly_dark",
         title="Évolution des anomalies dans le temps",
         labels={"count": "Nombre d'anomalies", "date_hour": "Date"}
     )
-    
     trend_fig.update_traces(
         line=dict(color='#38BDF8', width=3),
         mode='lines+markers',
         marker=dict(size=8, color='#0EA5E9')
     )
-    
     trend_fig.update_layout(
         margin=dict(l=10, r=10, t=50, b=30),
         title=dict(
@@ -148,13 +154,13 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
         ),
         height=300
     )
-    
+
     trend_chart = html.Div(
         dcc.Graph(figure=trend_fig, config={'displayModeBar': False}),
         className="card",
         style={'width': 'calc(100% - 20px)', 'margin': '10px'}
     )
-    
+
     return html.Div([
         html.H2("Tableau de bord des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
@@ -163,18 +169,17 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
         html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap", "justifyContent": "space-between"})
     ])
 
-
 def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     if not selected_olt:
         return html.Div([
             html.H2("Visualisation OLT", className="page-title", style={"marginTop": "0"}),
             html.Div([
                 html.P("Veuillez sélectionner un OLT pour afficher les données", style={"color": "#CBD5E1"}),
-                html.Div(html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}), 
+                html.Div(html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}),
                          style={"textAlign": "center", "margin": "40px 0"})
             ], style={"textAlign": "center", "padding": "40px"}, className="card")
         ])
-    
+
     y_col = "avg_dns_time"
     metric_name = "DNS"
     if selected_anomaly_col == "is_jump_avg_latence_scoring":
@@ -183,20 +188,17 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     elif selected_anomaly_col == "is_jump_avg_score_scoring":
         y_col = "avg_score_scoring"
         metric_name = "Score Scoring"
-    
-    # Statistiques pour l'OLT sélectionné
+
     anomalies_count = olt_df[olt_df[selected_anomaly_col]].shape[0]
     current_value = olt_df.iloc[-1][y_col] if not olt_df.empty else 0
     avg_value = olt_df[y_col].mean() if not olt_df.empty else 0
     max_value = olt_df[y_col].max() if not olt_df.empty else 0
-    
-    # Calcul de la variation en pourcentage
     prev_value = olt_df.iloc[-2][y_col] if len(olt_df) > 1 else current_value
     percent_change = ((current_value - prev_value) / prev_value * 100) if prev_value != 0 else 0
-    
+
     stats_cards = html.Div([
         html.Div([
-            html.H3("OLT sélectionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
+            html.H3("Réseau sélectionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.H2(f"{selected_olt}", style={"margin": "5px 0", "color": "#E2E8F0", "fontSize": "1.5rem"})
         ], className="card", style={"width": "250px"}),
         html.Div([
@@ -208,7 +210,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             html.Div([
                 html.H2(f"{current_value:.2f}", style={"margin": "5px 0", "color": "#E2E8F0", "fontSize": "1.5rem", "display": "inline-block"}),
                 html.Span(
-                    f" ({percent_change:.1f}%)", 
+                    f" ({percent_change:.1f}%)",
                     style={
                         "color": "#4ADE80" if percent_change <= 0 else "#EF4444",
                         "fontSize": "0.9rem",
@@ -222,15 +224,9 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             html.H2(f"{max_value:.2f}", style={"margin": "5px 0", "color": "#F87171", "fontSize": "1.5rem"})
         ], className="card", style={"width": "200px"})
     ], style={"display": "flex", "gap": "15px", "marginBottom": "20px", "flexWrap": "wrap"})
-    
-    # Graphique principal amélioré
+
     fig_ts = go.Figure()
-    
-    # Ajouter la zone d'arrière-plan pour mettre en évidence la période normale
-    time_range = olt_df["date_hour"].max() - olt_df["date_hour"].min()
     normal_threshold = avg_value * 1.2
-    
-    # Ajouter la ligne de référence pour la valeur normale moyenne
     fig_ts.add_hline(
         y=avg_value,
         line=dict(color="#94A3B8", width=1.5, dash="dash"),
@@ -238,8 +234,6 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         annotation_position="bottom right",
         annotation_font=dict(color="#94A3B8")
     )
-    
-    # Ajouter la ligne principale pour toutes les données
     fig_ts.add_trace(go.Scatter(
         x=olt_df["date_hour"],
         y=olt_df[y_col],
@@ -248,8 +242,6 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         line=dict(color="#38BDF8", width=2.5),
         hovertemplate=f"{metric_name}: %{{y:.2f}}<br>Date: %{{x|%d %b %Y %H:%M}}<extra></extra>"
     ))
-    
-    # Ajouter des points pour les anomalies
     anomalies_ts = olt_df[olt_df[selected_anomaly_col]]
     if not anomalies_ts.empty:
         fig_ts.add_trace(go.Scatter(
@@ -265,8 +257,6 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             name="Anomalies",
             hovertemplate=f"{metric_name}: %{{y:.2f}}<br>Date: %{{x|%d %b %Y %H:%M}}<extra></extra>"
         ))
-    
-    # Ajouter une zone de seuil pour les valeurs élevées
     fig_ts.add_hline(
         y=normal_threshold,
         line=dict(color="#F87171", width=1, dash="dot"),
@@ -274,7 +264,6 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         annotation_position="top right",
         annotation_font=dict(color="#F87171")
     )
-    
     fig_ts.update_layout(
         title=dict(
             text=f"Évolution de {metric_name} pour l'OLT {selected_olt}",
@@ -307,24 +296,20 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         ),
         height=500
     )
-    
-    # Création d'un histogramme de distribution
     hist_fig = px.histogram(
-        olt_df, 
+        olt_df,
         x=y_col,
         nbins=20,
         title=f"Distribution des valeurs de {metric_name}",
         template="plotly_dark",
         color_discrete_sequence=["#38BDF8"]
     )
-    
     hist_fig.add_vline(
         x=avg_value,
         line=dict(color="#94A3B8", width=1.5, dash="dash"),
         annotation_text="Moyenne",
         annotation_position="top right"
     )
-    
     hist_fig.update_layout(
         paper_bgcolor="#1E293B",
         plot_bgcolor="#1E293B",
@@ -338,12 +323,9 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             x=0.5
         )
     )
-    
-    # Création de la distribution journalière
     olt_df['hour'] = olt_df['date_hour'].dt.hour
     hour_counts = olt_df.groupby('hour')[selected_anomaly_col].mean().reset_index()
     hour_counts['hour_str'] = hour_counts['hour'].apply(lambda x: f"{x:02d}h")
-    
     hour_fig = px.bar(
         hour_counts,
         x='hour_str',
@@ -352,7 +334,6 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         template="plotly_dark",
         color_discrete_sequence=["#60A5FA"]
     )
-    
     hour_fig.update_layout(
         paper_bgcolor="#1E293B",
         plot_bgcolor="#1E293B",
@@ -366,12 +347,8 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             x=0.5
         )
     )
-    
-    # Calcul d'un bref résumé en texto
     anomaly_perc = anomalies_count / len(olt_df) * 100 if len(olt_df) > 0 else 0
     peak_time = hour_counts.sort_values(selected_anomaly_col, ascending=False).iloc[0]['hour_str'] if not hour_counts.empty else "N/A"
-    
-    # Création d'un résumé statistique
     summary_card = html.Div([
         html.H3("Résumé statistique", className="section-title"),
         html.Div([
@@ -381,9 +358,9 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             html.P(f"• Écart maximal: {(max_value - avg_value):.2f} ({(max_value/avg_value - 1)*100:.1f}% au-dessus de la moyenne)")
         ], style={'color': '#CBD5E1'})
     ], className="card", style={"width": "100%", "marginTop": "20px"})
-    
+
     return html.Div([
-        html.H2("Visualisation OLT", className="page-title", style={"marginTop": "0"}),
+        html.H2("Visualisation Réseau", className="page-title", style={"marginTop": "0"}),
         stats_cards,
         html.Div([
             dcc.Graph(figure=fig_ts, config={'displayModeBar': 'hover'}),
@@ -404,11 +381,10 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
     gdf_departements = gpd.read_file("https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements-version-simplifiee.geojson")
     anomalies_by_dep = historical_df[historical_df["anomalie"]].groupby("code_departement").size().reset_index(name="nb_alertes")
     anomalies_by_dep["code_departement"] = anomalies_by_dep["code_departement"].astype(str).str.zfill(2)
-    
-    # Ajouter des stats pour la carte
+
     total_deps = anomalies_by_dep.shape[0]
     max_anomalies = anomalies_by_dep["nb_alertes"].max() if not anomalies_by_dep.empty else 0
-    
+
     stats_cards = html.Div([
         html.Div([
             html.H2(f"{total_deps}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
@@ -419,11 +395,10 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
             html.P("Max anomalies dans un département", style={"margin": "0", "color": "#94A3B8"})
         ], className="card", style={"textAlign": "center", "width": "280px"})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
-    
+
     carte_df = gdf_departements.merge(anomalies_by_dep, how="left", left_on="code", right_on="code_departement")
     carte_df["nb_alertes"] = carte_df["nb_alertes"].fillna(0)
-    
-    # Amélioration de la carte
+
     fig_map = px.choropleth_mapbox(
         carte_df,
         geojson=carte_df.geometry.__geo_interface__,
@@ -440,7 +415,6 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         template="plotly_dark",
         labels={"nb_alertes": "Nombre d'anomalies"}
     )
-    
     fig_map.update_layout(
         margin={"r":0,"t":0,"l":0,"b":0},
         coloraxis_colorbar=dict(
@@ -453,11 +427,10 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         ),
         paper_bgcolor="#1E293B"
     )
-    
-    # Tableau des top départements
+
     top_deps = anomalies_by_dep.sort_values("nb_alertes", ascending=False).head(10)
     top_deps = top_deps.merge(gdf_departements[["code", "nom"]], left_on="code_departement", right_on="code", how="left")
-    
+
     table_header = [
         html.Thead(html.Tr([
             html.Th("Département", style={"textAlign": "left", "padding": "10px", "borderBottom": "1px solid #334155"}),
@@ -465,7 +438,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
             html.Th("Nombre d'anomalies", style={"textAlign": "right", "padding": "10px", "borderBottom": "1px solid #334155"})
         ]))
     ]
-    
+
     table_rows = []
     for i, row in top_deps.iterrows():
         table_rows.append(html.Tr([
@@ -473,9 +446,9 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
             html.Td(row["code_departement"], style={"textAlign": "center", "padding": "8px", "borderBottom": "1px solid #334155"}),
             html.Td(row["nb_alertes"], style={"textAlign": "right", "padding": "8px", "borderBottom": "1px solid #334155"})
         ]))
-    
+
     table_body = [html.Tbody(table_rows)]
-    
+
     table = html.Div([
         html.H3("Top 10 des départements", className="section-title"),
         html.Table(table_header + table_body, style={
@@ -484,7 +457,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
             "marginTop": "10px"
         })
     ], className="card", style={"marginTop": "20px"})
-    
+
     return html.Div([
         html.H2("Carte des anomalies par département", className="page-title", style={"marginTop": "0"}),
         stats_cards,
@@ -495,20 +468,15 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
     ])
 
 def create_journal_content(journal_df, selected_anomaly_col):
-    """Fonction améliorée pour le journal des anomalies"""
-    # Préparer les colonnes à afficher (simplifier l'affichage)
     display_columns = [
-        "date_hour", "olt_name", "boucle", "type_olt_model", 
-        "code_departement", "avg_dns_time", "avg_latence_scoring", 
+        "date_hour", "olt_name", "boucle", "type_olt_model",
+        "code_departement", "avg_dns_time", "avg_latence_scoring",
         "avg_score_scoring", selected_anomaly_col
     ]
-    
     journal_df = journal_df[display_columns].copy()
-    
-    # Renommer les colonnes pour un affichage plus lisible
     column_renames = {
         "date_hour": "Date et Heure",
-        "olt_name": "OLT",
+        "olt_name": "Réseau",
         "boucle": "Boucle",
         "type_olt_model": "Type OLT",
         "code_departement": "Département",
@@ -517,31 +485,17 @@ def create_journal_content(journal_df, selected_anomaly_col):
         "avg_score_scoring": "Score Moyen",
         selected_anomaly_col: "Anomalie"
     }
-    
     journal_df = journal_df.rename(columns=column_renames)
-    
-    # Formatter les valeurs numériques pour un meilleur affichage
     for col in ["DNS Moyen", "Latence Moyenne", "Score Moyen"]:
         if col in journal_df.columns:
             journal_df[col] = journal_df[col].round(2)
-    
-    # Convertir les booléens d'anomalies en texte
     journal_df["Anomalie"] = journal_df["Anomalie"].map({True: "Oui", False: "Non"})
-    
-    # Formatter les dates
     journal_df["Date et Heure"] = journal_df["Date et Heure"].dt.strftime("%Y-%m-%d %H:%M")
-    
-    # Préparer les colonnes pour DataTable
-    table_columns = [
-        {"name": col, "id": col, "selectable": True} for col in journal_df.columns
-    ]
-    
-    # Préparer les statistiques de synthèse
+    table_columns = [{"name": col, "id": col, "selectable": True} for col in journal_df.columns]
     total_anomalies = len(journal_df)
-    unique_olts = journal_df["OLT"].nunique()
+    unique_olts = journal_df["Réseau"].nunique()
     unique_boucles = journal_df["Boucle"].nunique()
     unique_depts = journal_df["Département"].nunique()
-    
     stats_cards = html.Div([
         html.Div([
             html.H2(f"{total_anomalies}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
@@ -549,7 +503,7 @@ def create_journal_content(journal_df, selected_anomaly_col):
         ], className="card", style={"textAlign": "center", "width": "180px"}),
         html.Div([
             html.H2(f"{unique_olts}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("OLTs uniques", style={"margin": "0", "color": "#94A3B8"})
+            html.P("Réseaux uniques", style={"margin": "0", "color": "#94A3B8"})
         ], className="card", style={"textAlign": "center", "width": "180px"}),
         html.Div([
             html.H2(f"{unique_boucles}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
@@ -560,12 +514,9 @@ def create_journal_content(journal_df, selected_anomaly_col):
             html.P("Départements", style={"margin": "0", "color": "#94A3B8"})
         ], className="card", style={"textAlign": "center", "width": "180px"})
     ], style={"display": "flex", "gap": "15px", "marginBottom": "20px", "flexWrap": "wrap"})
-    
-    # Préparer le CSV pour export
     buffer = io.StringIO()
     journal_df.to_csv(buffer, index=False)
-    csv_data = base64
-    # Bouton d'export amélioré
+    csv_data = base64.b64encode(buffer.getvalue().encode()).decode()
     download_link = html.A(
         html.Div([
             html.I(className="fas fa-download", style={"marginRight": "8px"}),
@@ -576,7 +527,6 @@ def create_journal_content(journal_df, selected_anomaly_col):
         className="export-link",
         style={"marginTop": "15px", "display": "inline-block"}
     )
-    
     return html.Div([
         html.H2("Journal des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
@@ -688,7 +638,7 @@ app.index_string = '''
             .header-right {
                 text-align: right;
             }
-            
+
             /* Style des onglets amélioré */
             .nav-bar {
                 display: flex;
@@ -718,7 +668,7 @@ app.index_string = '''
                 background-color: #0F172A;
                 border-bottom: 3px solid #38BDF8;
             }
-            
+
             main {
                 flex: 1;
                 padding: 30px;
@@ -763,7 +713,7 @@ app.index_string = '''
                 color: #38BDF8;
                 text-decoration: underline;
             }
-            
+
             /* Styles pour éléments spécifiques */
             .highlight {
                 color: #60A5FA;
@@ -792,7 +742,7 @@ app.index_string = '''
                 padding-bottom: 5px;
                 border-bottom: 1px solid #334155;
             }
-            
+
             .card {
                 background-color: #1E293B;
                 border: 1px solid #334155;
@@ -806,7 +756,7 @@ app.index_string = '''
                 transform: translateY(-3px);
                 box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
             }
-            
+
             /* AMÉLIORATION CARTES STATISTIQUES */
             .card h2 {
                 font-size: 2.5rem;
@@ -824,7 +774,7 @@ app.index_string = '''
             .card p {
                 color: #CBD5E1;
             }
-            
+
             /* Styles pour les contrôles */
             .Select-control, .Select-menu-outer {
                 background-color: #0F172A !important;
@@ -856,7 +806,7 @@ app.index_string = '''
                 background-color: #0F172A !important;
                 font-family: 'Inter', sans-serif !important;
             }
-            
+
             /* AMÉLIORATION BOUTONS RADIO */
             input[type="radio"] {
                 accent-color: #38BDF8;
@@ -886,7 +836,7 @@ app.index_string = '''
         border-bottom: 2px solid #38BDF8;
         padding-bottom: 8px;
     }
-    
+
     /* Catégories de filtres */
     .filter-category {
         color: #38BDF8;
@@ -896,7 +846,7 @@ app.index_string = '''
         margin-bottom: 10px;
         letter-spacing: 0.5px;
     }
-    
+
     /* Amélioration radio buttons et labels */
     .radio-item {
         display: flex;
@@ -905,11 +855,11 @@ app.index_string = '''
         transition: transform 0.2s;
         cursor: pointer;
     }
-    
+
     .radio-item:hover {
         transform: translateX(5px);
     }
-    
+
     .radio-item input[type="radio"] {
         width: 18px;
         height: 18px;
@@ -917,19 +867,19 @@ app.index_string = '''
         cursor: pointer;
         accent-color: #60A5FA;
     }
-    
+
     .radio-item label {
         color: #CBD5E1;
         font-weight: 500;
         cursor: pointer;
     }
-    
+
     /* Style spécial pour l'option sélectionnée */
     .radio-item input[type="radio"]:checked + label {
         color: #FFFFFF;
         font-weight: 600;
     }
-    
+
     /* Ajouter un fond distinct au volet gauche */
     .filter-panel {
         background-color: #111827;
@@ -938,36 +888,36 @@ app.index_string = '''
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         padding: 20px;
     }
-    
+
     /* Style pour les dropdowns */
     .filter-dropdown {
         margin-bottom: 15px;
     }
-    
+
     .filter-dropdown-label {
         color: #CBD5E1;
         font-weight: 500;
         margin-bottom: 8px;
         display: block;
     }
-    
+
     /* Amélioration des éléments de date */
     .date-picker-container {
         margin-bottom: 20px;
     }
-    
+
     .date-help-text {
         color: #94A3B8;
         font-size: 0.85em;
         font-style: italic;
         margin-top: 5px;
     }
-    
+
     /* Ajouter une bordure distinctive sur les entrées */
     .DateInput {
         border: 1px solid #38BDF8 !important;
     }
-    
+
     label {
         display: block;
         margin-bottom: 8px;
@@ -992,7 +942,7 @@ app.index_string = '''
         transform: translateY(-2px);
         box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
     }
-    
+
     /* AMÉLIORATION ZONE DE FILTRES */
     .filter-section {
         background-color: #111827;
@@ -1012,9 +962,9 @@ app.index_string = '''
         padding-bottom: 8px;
         text-transform: uppercase;
     }
-    
+
     /* Styles pour améliorer la sélection OLT */
-    
+
     /* Zone principale de visualisation avec un appel à l'action */
     .visualization-container {
         display: flex;
@@ -1030,7 +980,7 @@ app.index_string = '''
         position: relative;
         overflow: hidden;
     }
-    
+
     .visualization-container::before {
         content: '';
         position: absolute;
@@ -1041,12 +991,12 @@ app.index_string = '''
         background: radial-gradient(circle at center, rgba(56, 189, 248, 0.05) 0%, rgba(15, 23, 42, 0) 70%);
         z-index: 0;
     }
-    
+
     .selection-prompt {
         position: relative;
         z-index: 1;
     }
-    
+
     .selection-title {
         color: #60A5FA;
         font-size: 1.8em;
@@ -1054,14 +1004,14 @@ app.index_string = '''
         margin-bottom: 20px;
         text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
     }
-    
+
     .selection-description {
         color: #94A3B8;
         font-size: 1.1em;
         margin-bottom: 30px;
         max-width: 600px;
     }
-    
+
     /* Bouton pour diriger l'attention vers le sélecteur */
     .selection-button {
         background-color: #38BDF8;
@@ -1077,13 +1027,13 @@ app.index_string = '''
         align-items: center;
         gap: 10px;
     }
-    
+
     .selection-button:hover {
         background-color: #0EA5E9;
         transform: translateY(-2px);
         box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
     }
-    
+
     /* Animation pulsante pour attirer l'attention vers le menu de sélection */
     @keyframes pulse {
         0% {
@@ -1096,13 +1046,13 @@ app.index_string = '''
             box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
         }
     }
-    
+
     /* Améliorations pour le dropdown de sélection OLT */
     .olt-selection-dropdown {
         width: 100%;
         animation: pulse 2s infinite;
     }
-    
+
     .olt-selection-container {
         background-color: #1E293B;
         padding: 20px;
@@ -1111,11 +1061,11 @@ app.index_string = '''
         border: 1px solid #38BDF8;
         box-shadow: 0 4px 15px rgba(56, 189, 248, 0.15);
     }
-    
+
     .highlight-selector {
         animation: pulse 2s infinite;
     }
-    
+
     .olt-selection-title {
         color: #38BDF8;
         font-size: 1.3em;
@@ -1127,14 +1077,14 @@ app.index_string = '''
         align-items: center;
         gap: 10px;
     }
-    
+
     .olt-category {
         color: #CBD5E1;
         font-size: 1.1em;
         font-weight: 600;
         margin-bottom: 10px;
     }
-    
+
     /* Indications visuelles pour les OLTs disponibles */
     .olt-count {
         display: inline-block;
@@ -1145,20 +1095,20 @@ app.index_string = '''
         font-size: 0.8em;
         margin-left: 10px;
     }
-    
+
     /* Tooltip d'aide pour guider l'utilisateur */
     .tooltip-container {
         position: relative;
         display: inline-block;
         margin-left: 10px;
     }
-    
+
     .tooltip-icon {
         color: #60A5FA;
         cursor: pointer;
         font-size: 0.9em;
     }
-    
+
     .tooltip-text {
         visibility: hidden;
         width: 250px;
@@ -1181,12 +1131,12 @@ app.index_string = '''
         text-transform: none;
         letter-spacing: normal;
     }
-    
+
     .tooltip-container:hover .tooltip-text {
         visibility: visible;
         opacity: 1;
     }
-    
+
     /* Table header improvements */
     .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
         background-color: #0F172A !important;
@@ -1197,13 +1147,13 @@ app.index_string = '''
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    
+
     /* Responsive improvements */
     @media (max-width: 1200px) {
         .nav-bar {
             gap: 10px;
         }
-        
+
         .nav-bar a {
             font-size: 0.8em;
             padding: 8px 10px;
@@ -1257,97 +1207,61 @@ app.index_string = '''
                 <script>
                     // Script pour gérer les onglets actifs
                     function updateActiveTab() {
-                        // Obtenir le chemin actuel
                         const pathname = window.location.pathname || '/dashboard';
-                        
-                        // Retirer la classe active de tous les onglets
                         document.querySelectorAll('.nav-bar a').forEach(tab => {
                             tab.classList.remove('active');
                         });
-                        
-                        // Trouver l'onglet qui correspond au chemin actuel
                         let tabId = '';
-                        
-                        // Gérer le cas de la route par défaut
                         if (pathname === '/' || pathname === '') {
                             tabId = 'tab-dashboard';
                         } else {
-                            // Extraire l'id de l'onglet à partir du chemin
                             const route = pathname.split('/')[1];
                             tabId = route ? `tab-${route}` : 'tab-dashboard';
                         }
-                        
-                        // Ajouter la classe active à l'onglet actuel
                         const activeTab = document.getElementById(tabId);
                         if (activeTab) {
                             activeTab.classList.add('active');
                         }
                     }
-
-                    // Exécuter cette fonction au chargement de la page
                     document.addEventListener('DOMContentLoaded', function() {
                         updateActiveTab();
-                        
-                        // Observer les changements dans le contenu pour mettre à jour l'onglet actif
                         const observer = new MutationObserver(function(mutations) {
                             updateActiveTab();
                         });
-                        
-                        // Observer les changements dans la zone de contenu principale
                         const mainContent = document.getElementById('page-content');
                         if (mainContent) {
                             observer.observe(mainContent, { childList: true });
                         }
-                        
-                        // Gérer le click sur le bouton de sélection OLT
                         document.addEventListener('click', function(e) {
                             if (e.target.id === 'select-olt-btn' || e.target.closest('#select-olt-btn')) {
                                 const oltSelector = document.getElementById('olt-visual-controls');
                                 if (oltSelector) {
                                     oltSelector.classList.add('highlight-selector');
-                                    // Scroller vers le sélecteur OLT
                                     oltSelector.scrollIntoView({ behavior: 'smooth' });
-                                    
-                                    // Retirer l'effet de highlight après quelques secondes
                                     setTimeout(function() {
                                         oltSelector.classList.remove('highlight-selector');
                                     }, 3000);
                                 }
                             }
                         });
-                        
-                        // Amélioration des boutons radio pour la visualisation
                         document.querySelectorAll('input[type="radio"]').forEach(function(radio) {
-                            // Trouver le label associé au radio
-                            const label = document.querySelector(`label[for="${radio.id}"]`) || 
-                                         radio.nextElementSibling;
-                                         
+                            const label = document.querySelector(`label[for="${radio.id}"]`) || radio.nextElementSibling;
                             if (label) {
-                                // Créer un wrapper div
                                 const wrapper = document.createElement('div');
                                 wrapper.className = 'radio-item';
-                                
-                                // Placer le radio et son label dans le wrapper
                                 const radioParent = radio.parentNode;
                                 radioParent.insertBefore(wrapper, radio);
                                 wrapper.appendChild(radio);
                                 wrapper.appendChild(label);
-                                
-                                // Ajouter un event listener pour highlight
                                 radio.addEventListener('change', function() {
-                                    // Retirer highlight de tous les radios du même groupe
                                     document.querySelectorAll(`input[name="${radio.name}"]`).forEach(function(r) {
                                         const rWrapper = r.closest('.radio-item');
                                         if (rWrapper) {
                                             rWrapper.classList.remove('selected');
                                         }
                                     });
-                                    
-                                    // Ajouter highlight au radio sélectionné
                                     wrapper.classList.add('selected');
                                 });
-                                
-                                // Appliquer highlight initial si déjà sélectionné
                                 if (radio.checked) {
                                     wrapper.classList.add('selected');
                                 }
@@ -1361,7 +1275,7 @@ app.index_string = '''
 </html>
 '''
 
-# Maintenant, modifiez votre app.layout pour utiliser les nouvelles classes :
+# Maintenant, modifiez votre app.layout pour utiliser les nouvelles classes et le sélecteur de source :
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -1370,6 +1284,15 @@ app.layout = html.Div([
         html.Div([
             html.Div([
                 html.H3("FILTRES", className="left-panel-title", style={"marginTop": "0"}),
+                # Ajout du sélecteur de source
+                html.H4("Source de données", className="filter-category"),
+                dcc.Dropdown(
+                    id="data-source-picker",
+                    options=[{"label": key, "value": key} for key in data_sources.keys()],
+                    value="OLT",
+                    clearable=False,
+                    className="filter-dropdown"
+                ),
                 html.H4("Date", className="filter-category"),
                 html.Div([
                     dcc.DatePickerSingle(
@@ -1386,7 +1309,6 @@ app.layout = html.Div([
                         className="date-help-text"
                     )
                 ], className="date-picker-container"),
-                
                 html.H4("Heure", className="filter-category"),
                 html.Div([
                     dcc.Dropdown(
@@ -1396,7 +1318,6 @@ app.layout = html.Div([
                         clearable=False
                     )
                 ], className="filter-dropdown"),
-                
                 html.H4("Période d'analyse", className="filter-category"),
                 dcc.RadioItems(
                     id='hours-back',
@@ -1412,7 +1333,6 @@ app.layout = html.Div([
                     labelClassName="radio-label",
                     labelStyle={'display': 'inline-block'}
                 ),
-                
                 html.H4("Type d'anomalie", className="filter-category"),
                 dcc.RadioItems(
                     id='anomaly-type',
@@ -1424,8 +1344,7 @@ app.layout = html.Div([
                     labelStyle={'display': 'inline-block'}
                 ),
             ], className="filter-panel"),
-            
-            # Filtres supplémentaires pour le Journal (conserver cette partie mais ajouter les classes)
+            # Filtres supplémentaires pour le Journal
             html.Div([
                 html.H3("Filtres avancés", className="left-panel-title", style={"marginTop": "20px"}),
                 html.H4("Filtrer par Boucle", className="filter-category"),
@@ -1445,23 +1364,21 @@ app.layout = html.Div([
                     className="filter-dropdown"
                 )
             ], id="journal-filters", style={"display": "none"}, className="filter-panel"),
-            
             # Bloc pour le sélecteur OLT (affiché uniquement sur la page Visualisation)
             html.Div([
-                html.H3("Sélection OLT", className="left-panel-title", style={"marginTop": "20px"}),
-                html.H4("OLT", className="filter-category"),
+                html.H3("Sélection réseau", className="left-panel-title", style={"marginTop": "20px"}),
+                html.H4("Réseau", className="filter-category"),
                 dcc.Dropdown(
                     id='olt-picker',
                     options=[],
-                    placeholder="Sélectionnez un OLT",
+                    placeholder="Sélectionnez un réseau",
                     className="filter-dropdown"
                 )
             ], id="olt-visual-controls", style={"display": "none"}, className="filter-panel")
         ], style={'width': '320px', 'float': 'left'}),
-        
         # Colonne du contenu principal
         html.Div(id="page-content", style={
-            'marginLeft': '350px', 
+            'marginLeft': '350px',
             'padding': '20px',
             'backgroundColor': '#1E293B',
             'borderRadius': '8px',
@@ -1489,11 +1406,13 @@ def toggle_journal_filters(pathname):
     Input('url', 'pathname'),
     Input('date-picker', 'date'),
     Input('hour-picker', 'value'),
-    Input('anomaly-type', 'value')
+    Input('anomaly-type', 'value'),
+    Input('data-source-picker', 'value')
 )
-def update_olt_selector(pathname, date_str, hour, anomaly_type):
+def update_olt_selector(pathname, date_str, hour, anomaly_type, selected_source):
     if pathname != '/visual':
         return {"display": "none"}, []
+    df = data_sources[selected_source]
     selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
     df_hour = df[(df["date_hour"] >= selected_datetime) &
                  (df["date_hour"] < selected_datetime + timedelta(hours=1))]
@@ -1511,14 +1430,13 @@ def update_olt_selector(pathname, date_str, hour, anomaly_type):
     Input('anomaly-type', 'value'),
     Input('olt-picker', 'value'),
     Input('boucle-filter', 'value'),
-    Input('olt-type-filter', 'value')
+    Input('olt-type-filter', 'value'),
+    Input('data-source-picker', 'value')
 )
-
-
-
-def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_olt, boucle_filter, olt_type_filter):
+def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_olt, boucle_filter, olt_type_filter, selected_source):
     if pathname not in ['/dashboard', '/journal', '/map', '/visual', '/scenario-builder', '/actions']:
         pathname = '/dashboard'
+    df = data_sources[selected_source]
     selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
     start_datetime = selected_datetime - timedelta(hours=int(hours_back))
     selected_anomaly_col = anomaly_col_map[anomaly_type]
@@ -1530,10 +1448,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
         pie_charts = []
         for attr in attrs:
             counts = historical_df[historical_df["anomalie"]].groupby(attr).size().reset_index(name="nb_alertes")
-            if attr in ["code_departement", "boucle"]:
-                counts = counts.sort_values("nb_alertes", ascending=False).head(3)
-            else:
-                counts = counts.sort_values("nb_alertes", ascending=False).head(5)
+            counts = counts.sort_values("nb_alertes", ascending=False).head(5)
             pie_fig = px.pie(
                 counts,
                 names=attr,
@@ -1571,8 +1486,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
             html.H3("Répartition des anomalies", className="highlight"),
             html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap"})
         ])
-    
-        # Dans le callback display_page, modifiez la section concernant '/journal'
+
     elif pathname == '/journal':
         journal_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] < selected_datetime)]
         journal_df = journal_df[journal_df[selected_anomaly_col]]
@@ -1581,10 +1495,8 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
         if olt_type_filter:
             journal_df = journal_df[journal_df["type_olt_model"].isin(olt_type_filter)]
         journal_df = journal_df.sort_values("date_hour", ascending=False)
-        
-        # Utiliser la fonction améliorée pour créer le journal
         return create_journal_content(journal_df, selected_anomaly_col)
-    
+
     elif pathname == '/map':
         historical_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] <= selected_datetime)].copy()
         historical_df["anomalie"] = historical_df[selected_anomaly_col]
@@ -1613,19 +1525,15 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
             html.H3("Carte des anomalies", className="highlight"),
             dcc.Graph(figure=fig_map, style={'width': '100%', 'height': '600px'})
         ])
-    
+
     elif pathname == '/visual':
         if not selected_olt:
-            return html.Div([html.H4("Visualisation", className="highlight"), html.P("Veuillez sélectionner un OLT")])
+            return html.Div([html.H4("Visualisation", className="highlight"), html.P("Veuillez sélectionner un réseau")])
         visual_start = selected_datetime - timedelta(hours=int(hours_back))
         olt_df = df[(df["olt_name"] == selected_olt) & (df["date_hour"] >= visual_start) & (df["date_hour"] <= selected_datetime)].sort_values("date_hour")
-        
-        # Utiliser la fonction avancée pour la visualisation
         return create_visual_content(olt_df, selected_olt, selected_anomaly_col)
-
         
     elif pathname == '/scenario-builder':
-        
         return html.Div([
             html.H3("Scenario Builder", className="highlight"),
             html.P("Ici vous pourrez créer et sauvegarder des scénarios de simulation d'anomalies. (Fonctionnalités à implémenter)")
@@ -1637,8 +1545,6 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_ol
             html.P("Cette page permettra de lancer des actions correctives ou des scripts automatisés suite à des alertes. (Fonctionnalités à implémenter)")
         ])
     return html.Div(["Page non reconnue"])
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
