@@ -10,11 +10,25 @@ import dash.dash_table
 import io
 import base64
 
+# Mapping pour les types d'anomalies en fonction de la méthode
+anomaly_mapping = {
+    "JUMP": {
+        "DNS": "is_jump_avg_dns_time",
+        "Latence Scoring": "is_jump_avg_latence_scoring",
+        "Score Scoring": "is_jump_avg_score_scoring"
+    },
+    "DBSCAN": {
+        "DNS": "is_anomaly_dns",
+        "Latence Scoring": "is_anomaly_latence",
+        "Score Scoring": "is_anomaly_scoring"
+    }
+}
+
 # 2. Chargement des données depuis les deux sources
 def load_data_sources():
     # Charger les deux fichiers Parquet
-    df_olt = pd.read_parquet("../data/data_with_anomalies_with_jump_model.parquet")
-    df_peag = pd.read_parquet("../data/data_with_anomalies_PEAG_with_jump_model.parquet")
+    df_olt = pd.read_parquet("../data/data_with_anomalies_OLT_with_jump_and_DB_SCAN.parquet")
+    df_peag = pd.read_parquet("../data/data_with_anomalies_PEAG_with_jump_and_DB_SCAN.parquet")
 
     # Liste des colonnes à retirer
     columns_to_drop = [
@@ -236,7 +250,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         annotation_font=dict(color="#F87171")
     )
     fig_ts.update_layout(
-        title=dict(text=f"Évolution de {metric_name} pour l'OLT {selected_olt}",
+        title=dict(text=f"Évolution de {metric_name} pour le réseau {selected_olt}",
                    font=dict(size=16, color='#60A5FA'), x=0.5),
         paper_bgcolor="#1E293B",
         plot_bgcolor="#1E293B",
@@ -708,6 +722,22 @@ app.layout = html.Div([
                     clearable=False,
                     className="filter-dropdown"
                 ),
+                html.H4("Méthode", className="filter-category"),
+                dcc.RadioItems(
+                   id="anomaly-method",
+                   options=[
+                       {"label": "JUMP", "value": "JUMP"},
+                       {"label": "DBSCAN", "value": "DBSCAN"}
+                   ],
+                   value="JUMP",
+                   className="radio-group",
+                   inputClassName="radio-input",
+                   labelClassName="radio-label",
+                   labelStyle={
+                       'display': 'inline-block',
+                       'marginRight': '20px'  # ajoute de l'espace entre les boutons
+                   }
+                ),
                 html.H4("Date", className="filter-category"),
                 html.Div([
                     dcc.DatePickerSingle(
@@ -812,15 +842,18 @@ def toggle_journal_filters(pathname):
     Input('date-picker', 'date'),
     Input('hour-picker', 'value'),
     Input('anomaly-type', 'value'),
+    Input('anomaly-method', 'value'),  # Nouvel input
     Input('data-source-picker', 'value')
 )
-def update_olt_selector(pathname, date_str, hour, anomaly_type, selected_source):
+def update_olt_selector(pathname, date_str, hour, anomaly_type, anomaly_method, selected_source):
     if pathname != '/visual':
         return {"display": "none"}, []
     df = data_sources[selected_source]
     selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
     df_hour = df[(df["date_hour"] >= selected_datetime) & (df["date_hour"] < selected_datetime + timedelta(hours=1))]
-    df_hour = df_hour[df_hour[anomaly_col_map[anomaly_type]]]
+    # Utilisation du mapping selon la méthode choisie
+    selected_anomaly_col = anomaly_mapping[anomaly_method][anomaly_type]
+    df_hour = df_hour[df_hour[selected_anomaly_col]]
     olts = sorted(df_hour["olt_name"].unique())
     return {"display": "block", "marginTop": "10px"}, [{'label': o, 'value': o} for o in olts]
 
@@ -831,20 +864,22 @@ def update_olt_selector(pathname, date_str, hour, anomaly_type, selected_source)
     Input('hour-picker', 'value'),
     Input('hours-back', 'value'),
     Input('anomaly-type', 'value'),
+    Input('anomaly-method', 'value'),  # Nouvel input
     Input('olt-picker', 'value'),
     Input('boucle-filter', 'value'),
     Input('olt-type-filter', 'value'),
     Input('data-source-picker', 'value')
 )
-def display_page(pathname, date_str, hour, hours_back, anomaly_type, selected_olt, boucle_filter, olt_type_filter, selected_source):
+def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_method, selected_olt, boucle_filter, olt_type_filter, selected_source):
     if pathname not in ['/dashboard', '/journal', '/map', '/visual', '/scenario-builder', '/actions']:
         pathname = '/dashboard'
     df = data_sources[selected_source]
     selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
     start_datetime = selected_datetime - timedelta(hours=int(hours_back))
-    # Pour la carte, on calcule la durée de la fenêtre en jours (pour normalisation)
     window_length_days = (selected_datetime - start_datetime).total_seconds() / 86400
-    selected_anomaly_col = anomaly_col_map[anomaly_type]
+
+    # Sélection de la colonne d'anomalie selon la méthode choisie.
+    selected_anomaly_col = anomaly_mapping[anomaly_method][anomaly_type]
 
     if pathname == '/dashboard':
         historical_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] <= selected_datetime)].copy()
