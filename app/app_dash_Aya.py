@@ -667,6 +667,9 @@ html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
                 input[type="text"] {
                     color: #3498DB !important;
                     background-color: #F8F9F9 !important;
+                    font-size: 0.9rem;  /* Réduction de la taille de police */
+                    padding: 5px 10px;  /* Réduction du padding */
+                    height: 34px;  /* Hauteur fixe plus petite */
                 }
             input[type="radio"] { accent-color: #38BDF8; width: 18px; height: 18px; margin-right: 8px; }
             .radio-label { display: flex; align-items: center; margin-bottom: 10px; color: #3498DB; font-weight: 500; cursor: pointer; }
@@ -675,21 +678,21 @@ html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
     <style>
 .left-panel-title {
     color: #2C3E50;  /* Bleu très foncé, presque noir */
-    font-size: 1.5em;
+    font-size: 1.2em;
     font-weight: 700;
     margin-bottom: 20px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     text-transform: uppercase;
     border-bottom: 2px solid #3498DB;
     padding-bottom: 8px;
 }
 .filter-category {
     color: #1A5276;  /* Bleu marine foncé */
-    font-size: 1.2em;
+    font-size: 1em;
     font-weight: 700;  /* Un peu plus gras */
     margin-top: 20px;
     margin-bottom: 10px;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     border-left: 3px solid #3498DB;  /* Une petite bordure à gauche pour du style */
     padding-left: 8px;  /* Espacement pour la bordure */
     border-bottom: 1px solid #D6DBDF;  /* Ligne de séparation très subtile */
@@ -722,11 +725,11 @@ html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
     .filter-dropdown-label { color: #CBD5E1; font-weight: 500; margin-bottom: 8px; display: block; }
 .date-picker-container {
     margin-bottom: 20px;
-    padding: 8px;
+    padding: 5px;
     background-color: #FFFFFF;  /* Fond blanc pour les contrôles */
     border-radius: 5px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);  /* Ombre très subtile */
-}    .date-help-text { color: #94A3B8; font-size: 0.85em; font-style: italic; margin-top: 5px; }
+}    .date-help-text { color: #94A3B8; font-size: 0.7em; font-style: italic; margin-top: 3px; }
     .DateInput { border: 1px solid #38BDF8 !important; }
     label { display: block; margin-bottom: 8px; font-weight: 500; color: #CBD5E1; }
     .export-link { display: inline-flex; align-items: center; margin-top: 15px; padding: 10px 18px; background-color: #38BDF8; color: #0F172A; text-decoration: none; border-radius: 6px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
@@ -883,7 +886,11 @@ app.layout = html.Div([
                     date=max_date.date(),
                     display_format='YYYY-MM-DD',
                     with_portal=True,
-                    first_day_of_week=1
+                    first_day_of_week=1, 
+                    style={
+                    'fontWeight': 'bold',  # Ajoutez cette ligne pour mettre en gras
+                    'color': '#3498DB'  # Gardez la couleur bleue si vous le souhaitez
+                }
                 ),
                 html.Div([
                     html.Span("📅", style={'marginRight': '5px', 'opacity': '0.7'}),
@@ -968,8 +975,8 @@ app.layout = html.Div([
     'float': 'left',
     'border': '1px solid #FFFFFF',
     'borderRadius': '8px',
-    'backgroundColor': '#F2F3F4',  # Cette ligne change tout le fond du cadre
-    'padding': '10px',  # Optionnel: pour plus d'espace
+    'backgroundColor': '#E6E9EB',  # Cette ligne change tout le fond du cadre
+    'padding': '8px',  # Optionnel: pour plus d'espace
 }),
         html.Div(id="page-content", style={
             'marginLeft': '350px',
