@@ -130,7 +130,8 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
                 y=-0.2, 
                 xanchor="center", 
                 x=0.5,
-                font=dict(color='#2C3E50', size=11)
+                font=dict(color='#e0e0e0', size=10),
+                height=3
             ),
             title=dict(font=dict(size=16, color='#3498DB'), x=0.5),
             paper_bgcolor='#F2F3F4',  # Fond blanc/bleu clair
@@ -147,7 +148,7 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
     # Disposition des graphiques en 2x2
     charts_layout = html.Div([
         html.Div(pie_charts[:2], style={'display': 'flex', 'justifyContent': 'space-between'}),
-        html.Div(pie_charts[2:], style={'display': 'flex', 'justifyContent': 'space-between', 'marginTop': '20px'})
+        html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap", "justifyContent": "center", "gap": "20px"})
     ])
 
     volume_details = []
@@ -181,7 +182,7 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
         html.Div(volume_details, style={
             "display": "flex", 
             "flexWrap": "wrap", 
-            "justifyContent": "space-between"
+            "justifyContent": "center"   #"space-between"
         }),
         html.H3("Répartition des anomalies", className="section-title"),
         charts_layout
@@ -1129,10 +1130,12 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
                 font=dict(size=10),
                 paper_bgcolor='rgba(0,0,0,0)',  # Fond transparent pour les graphes
                 plot_bgcolor='rgba(0,0,0,0)',   # Fond de la zone de tracé transparent
+                height=350
             )
             pie_charts.append(html.Div(
                 dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
-                style={'width': '300px', 'margin': '10px'}
+                style={'width': '300px', 'height': '350px' ,'margin': '10px'}
+                
             ))
         volume_details = []
         for attr in attrs:
