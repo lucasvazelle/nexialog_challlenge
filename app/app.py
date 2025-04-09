@@ -24,6 +24,22 @@ anomaly_mapping = {
     }
 }
 
+scenarios = [
+    {
+        "id": 1,
+        "name": "Redémarrage automatique",
+        "description": "Redémarrage ciblé de l'OLT si anomalies > 5% sur 1h.",
+        "condition": "Seuil : 5% / 1h",
+        "actions": ["Redémarrage OLT", "Envoi d'alerte email"]
+    },
+    {
+        "id": 2,
+        "name": "Alerte Administrateur",
+        "description": "Envoi d'une alerte à l'administrateur si anomalies > 15% sur 30 minutes.",
+        "condition": "Seuil : 10% / 1h",
+        "actions": ["Envoi d'alerte SMS", "Envoi d'email"]
+    }
+]
 # 2. Chargement des données depuis les deux sources
 def load_data_sources():
     # Charger les deux fichiers Parquet
@@ -85,7 +101,7 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
         html.Div([
             html.H2(f"{total_anomalies} ({ratio:.1f}%)", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Volume total d'anomalies", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "220px"}),
+        ], className="card", style={"textAlign": "center", "width": "220px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{total_olts}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("OLTs affectés", style={"margin": "0", "color": "#94A3B8"})
@@ -181,6 +197,13 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     elif selected_anomaly_col == "is_jump_avg_score_scoring":
         y_col = "avg_score_scoring"
         metric_name = "Score Scoring"
+    elif selected_anomaly_col == "is_anomaly_latence":
+            y_col = "avg_latence_scoring"
+            metric_name = "Latence Scoring"
+    elif selected_anomaly_col == "is_anomaly_scoring":
+            y_col = "avg_score_scoring"
+            metric_name = "Score Scoring"
+
 
     anomalies_count = olt_df[olt_df[selected_anomaly_col]].shape[0]
     current_value = olt_df.iloc[-1][y_col] if not olt_df.empty else 0
@@ -193,11 +216,11 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
         html.Div([
             html.H3("Réseau sélectionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.H2(f"{selected_olt}", style={"margin": "5px 0", "color": "#E2E8F0", "fontSize": "1.5rem"})
-        ], className="card", style={"width": "250px"}),
+        ], className="card", style={"width": "250px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H3("Anomalies détectées", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.H2(f"{anomalies_count}", style={"margin": "5px 0", "color": "#38BDF8", "fontSize": "1.5rem"})
-        ], className="card", style={"width": "200px"}),
+        ], className="card", style={"width": "200px", 'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H3(f"Valeur actuelle {metric_name}", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.Div([
@@ -208,11 +231,11 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
                     "marginLeft": "5px"
                 })
             ], style={"display": "flex", "alignItems": "center"})
-        ], className="card", style={"width": "200px"}),
+        ], className="card", style={"width": "200px",'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H3(f"Valeur max {metric_name}", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.H2(f"{max_value:.2f}", style={"margin": "5px 0", "color": "#F87171", "fontSize": "1.5rem"})
-        ], className="card", style={"width": "200px"})
+        ], className="card", style={"width": "200px", 'border': '0.5px solid #FFFFFF','borderRadius': '8px'})
     ], style={"display": "flex", "gap": "15px", "marginBottom": "20px", "flexWrap": "wrap"})
 
     fig_ts = go.Figure()
@@ -242,13 +265,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
             name="Anomalies",
             hovertemplate=f"{metric_name}: %{{y:.2f}}<br>Date: %{{x|%d %b %Y %H:%M}}<extra></extra>"
         ))
-    fig_ts.add_hline(
-        y=normal_threshold,
-        line=dict(color="#F87171", width=1, dash="dot"),
-        annotation_text="Seuil d'alerte",
-        annotation_position="top right",
-        annotation_font=dict(color="#F87171")
-    )
+
     fig_ts.update_layout(
         title=dict(text=f"Évolution de {metric_name} pour le réseau {selected_olt}",
                    font=dict(size=16, color='#60A5FA'), x=0.5),
@@ -347,11 +364,11 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         html.Div([
             html.H2(f"{dep_stats.shape[0]}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Départements touchés", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "230px"}),
+        ], className="card", style={"textAlign": "center", "width": "230px",  'border': '1px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{dep_stats['nb_alertes'].max()}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Max anomalies dans un département", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "280px"})
+        ], className="card", style={"textAlign": "center", "width": "280px",  'border': '1px solid #FFFFFF','borderRadius': '8px'})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
 
     carte_df = gdf_departements.merge(dep_stats, how="left", left_on="code", right_on="code_departement")
@@ -396,7 +413,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
             html.Th("Département", style={"textAlign": "left", "padding": "10px", "borderBottom": "1px solid #334155"}),
             html.Th("Code", style={"textAlign": "center", "padding": "10px", "borderBottom": "1px solid #334155"}),
             html.Th("Nombre d'anomalies", style={"textAlign": "right", "padding": "10px", "borderBottom": "1px solid #334155"}),
-            html.Th("Pourcentage", style={"textAlign": "right", "padding": "10px", "borderBottom": "1px solid #334155"})
+            html.Th("Pourcentage", style={"textAlign": "right", "padding": "10px", "borderBottom": "0.5px solid #334155"})
         ]))
     ]
     table_rows = []
@@ -405,13 +422,13 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
             html.Td(row["nom"], style={"padding": "8px", "borderBottom": "1px solid #334155"}),
             html.Td(row["code_departement"], style={"textAlign": "center", "padding": "8px", "borderBottom": "1px solid #334155"}),
             html.Td(row["nb_alertes"], style={"textAlign": "right", "padding": "8px", "borderBottom": "1px solid #334155"}),
-            html.Td(f"{row['pct_alertes']:.1f}%", style={"textAlign": "right", "padding": "8px", "borderBottom": "1px solid #334155"})
+            html.Td(f"{row['pct_alertes']:.1f}%", style={"textAlign": "right", "padding": "8px", "borderBottom": "0.5px solid #334155"})
         ]))
     table_body = [html.Tbody(table_rows)]
     table = html.Div([
         html.H3("Top 10 des départements", className="section-title"),
         html.Table(table_header + table_body, style={"width": "100%", "borderCollapse": "collapse", "marginTop": "10px"})
-    ], className="card", style={"marginTop": "20px"})
+    ], className="card", style={"marginTop": "20px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'})
 
     return html.Div([
         html.H2("Carte des anomalies par département", className="page-title", style={"marginTop": "0"}),
@@ -464,22 +481,22 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
             html.H2(f"{total_anomalies} ({ratio_journal:.1f}%)",
                     style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Volume total d'anomalies", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "180px"}),
+        ], className="card", style={"textAlign": "center", "width": "180px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{journal_df['Réseau'].nunique()}",
                     style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Réseaux uniques", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "180px"}),
+        ], className="card", style={"textAlign": "center", "width": "180px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{journal_df['Boucle'].nunique()}",
                     style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Boucles uniques", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "180px"}),
+        ], className="card", style={"textAlign": "center", "width": "180px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{journal_df['Département'].nunique()}",
                     style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
             html.P("Départements", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "180px"})
+        ], className="card", style={"textAlign": "center", "width": "180px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'})
     ], style={"display": "flex", "gap": "15px", "marginBottom": "20px", "flexWrap": "wrap"})
 
     buffer = io.StringIO()
@@ -526,6 +543,7 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
 # Configuration de l'application Dash
 app = dash.Dash(__name__)
 app.title = "Anomalie Network Dashboard"
+app.config.suppress_callback_exceptions = True  # Permet d'utiliser des callbacks sur des composants chargés dynamiquement
 
 app.index_string = '''
 <!DOCTYPE html>
@@ -596,8 +614,8 @@ app.index_string = '''
     label { display: block; margin-bottom: 8px; font-weight: 500; color: #CBD5E1; }
     .export-link { display: inline-flex; align-items: center; margin-top: 15px; padding: 10px 18px; background-color: #38BDF8; color: #0F172A; text-decoration: none; border-radius: 6px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
     .export-link:hover { background-color: #0EA5E9; transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15); }
-    .filter-section { background-color: #111827; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; border: 1px solid #334155; }
-    .filter-section h3 { color: #60A5FA; font-size: 1.2em; font-weight: 700; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #334155; padding-bottom: 8px; text-transform: uppercase; }
+    .filter-section { background-color: #111827; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; border: 2px solid #FFFFFF; }
+    .filter-section h3 { color: #60A5FA; font-size: 1.2em; font-weight: 700; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #FFFFFF; padding-bottom: 8px; text-transform: uppercase; }
     .visualization-container { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #0F172A; border-radius: 10px; border: 1px solid #334155; padding: 40px; text-align: center; height: 400px; position: relative; overflow: hidden; }
     .visualization-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at center, rgba(56, 189, 248, 0.05) 0%, rgba(15, 23, 42, 0) 70%); z-index: 0; }
     .selection-prompt { position: relative; z-index: 1; }
@@ -633,10 +651,11 @@ app.index_string = '''
                     <nav class="nav-bar">
                         <a href="/dashboard" id="tab-dashboard">ALERTES</a>
                         <a href="/journal" id="tab-journal">JOURNAL</a>
-                        <a href="/map" id="tab-map">CARTE</a>
                         <a href="/visual" id="tab-visual">VISUALISATION</a>
                         <a href="/scenario-builder" id="tab-scenario">SCENARIO</a>
-                        <a href="/actions" id="tab-actions">ACTIONS</a>
+                        <a href="/map" id="tab-map">CARTE</a>
+
+
                     </nav>
                 </div>
             </header>
@@ -713,7 +732,7 @@ app.layout = html.Div([
         # Colonne des filtres avec sélection OLT intégrée
         html.Div([
             html.Div([
-                html.H3("FILTRES", className="left-panel-title", style={"marginTop": "0"}),
+                html.H3("FILTRES", className="left-panel-title", style={"marginTop": "0",}),
                 html.H4("Source de données", className="filter-category"),
                 dcc.Dropdown(
                     id="data-source-picker",
@@ -735,7 +754,7 @@ app.layout = html.Div([
                    labelClassName="radio-label",
                    labelStyle={
                        'display': 'inline-block',
-                       'marginRight': '20px'  # ajoute de l'espace entre les boutons
+                       'marginRight': '20px' ,
                    }
                 ),
                 html.H4("Date", className="filter-category"),
@@ -815,7 +834,10 @@ app.layout = html.Div([
                     className="filter-dropdown"
                 )
             ], id="olt-visual-controls", style={"display": "none"}, className="filter-panel")
-        ], style={'width': '320px', 'float': 'left'}),
+        ], style={'width': '320px',
+        'float': 'left',
+        'border': '1px solid #FFFFFF',
+        'borderRadius': '8px'}),
         html.Div(id="page-content", style={
             'marginLeft': '350px',
             'padding': '20px',
@@ -857,6 +879,70 @@ def update_olt_selector(pathname, date_str, hour, anomaly_type, anomaly_method, 
     olts = sorted(df_hour["olt_name"].unique())
     return {"display": "block", "marginTop": "10px"}, [{'label': o, 'value': o} for o in olts]
 
+scenario_layout = html.Div([
+    html.H2("Gestion des Scénarios de Résolution",
+            className="page-title",
+            style={"marginTop": "0", "padding": "30px 0"}),
+    html.Div([
+        # Colonne gauche : liste des scénarios
+        html.Div([
+            html.H3("Scénarios Disponibles",
+                    className="section-title",
+                    style={"paddingBottom": "20px"}),
+            html.Ul(
+                [
+                    html.Li(
+                        html.Button(
+                            scenario["name"],
+                            id=f'scenario-btn-{scenario["id"]}',
+                            n_clicks=0,
+                            className="card",
+                            style={
+                                "marginBottom": "10px",
+                                "width": "100%",
+                                "backgroundColor": "#1E293B",
+                                "border": "0.5px solid #FFFFFF",
+                                "color": "#E2E8F0",
+                                "padding": "30px",
+                                "borderRadius": "8px",
+                                "cursor": "pointer"
+                            }
+                        )
+                    )
+                    for scenario in scenarios
+                ],
+                style={"listStyleType": "none", "padding": "0", "margin": "0"}
+            )
+        ], style={
+            "flex": "0 0 30%",
+            "padding": "20px",
+            "borderRight": "1px solid #334155"
+        }),
+        # Colonne droite : détails du scénario sélectionné
+        html.Div([
+            html.Div(
+                id="scenario-details",
+                children=[
+                    html.H3("Sélectionnez un scénario pour voir les détails",
+                            className="section-title",
+                            style={"paddingBottom": "10px"})
+                ],
+                className="card",
+                style={
+                    "padding": "40px",
+                    "backgroundColor": "#1E293B",
+                    "border": "1px solid #334155",
+                    "borderRadius": "8px",
+                    "minHeight": "300px"
+                }
+            )
+        ], style={
+            "flex": "0 0 65%",
+            "padding": "20px"
+        })
+    ], style={"display": "flex", "flexWrap": "nowrap"})
+], style={"backgroundColor": "#0F172A", "padding": "20px", "borderRadius": "8px"})
+
 @app.callback(
     Output('page-content', 'children'),
     Input('url', 'pathname'),
@@ -871,7 +957,7 @@ def update_olt_selector(pathname, date_str, hour, anomaly_type, anomaly_method, 
     Input('data-source-picker', 'value')
 )
 def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_method, selected_olt, boucle_filter, olt_type_filter, selected_source):
-    if pathname not in ['/dashboard', '/journal', '/map', '/visual', '/scenario-builder', '/actions']:
+    if pathname not in ['/dashboard', '/journal', '/map', '/visual', '/scenario-builder']:
         pathname = '/dashboard'
     df = data_sources[selected_source]
     selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
@@ -917,7 +1003,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
                 html.H4(attr.replace('_', ' ').title(), className="highlight"),
                 html.P(f"Volume total d'anomalies: {total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)", style={'fontSize': '12px'}),
                 html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()])
-            ], className="card", style={'width': '300px'}))
+            ], className="card", style={'width': '300px', 'border': '1px solid #FFFFFF','borderRadius': '8px'}))
         return html.Div([
             html.H3("Détails des volumes d'anomalies", className="highlight"),
             html.Div(volume_details, style={"display": "flex", "flexWrap": "wrap"}),
@@ -951,17 +1037,41 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
         return create_visual_content(olt_df, selected_olt, selected_anomaly_col)
 
     elif pathname == '/scenario-builder':
-        return html.Div([
-            html.H3("Scenario Builder", className="highlight"),
-            html.P("Ici vous pourrez créer et sauvegarder des scénarios de simulation d'anomalies. (Fonctionnalités à implémenter)")
-        ])
+        return scenario_layout
 
-    elif pathname == '/actions':
-        return html.Div([
-            html.H3("Actions", className="highlight"),
-            html.P("Cette page permettra de lancer des actions correctives ou des scripts automatisés suite à des alertes. (Fonctionnalités à implémenter)")
-        ])
+
+
     return html.Div(["Page non reconnue"])
+@app.callback(
+    Output("scenario-details", "children"),
+    [Input(f"scenario-btn-{scenario['id']}", "n_clicks") for scenario in scenarios]
+)
+def update_scenario_details(*args):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return html.H3("Sélectionnez un scénario pour voir les détails")
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    try:
+        scenario_id = int(button_id.split("-")[-1])
+    except ValueError:
+        return html.H3("Erreur d'identification du scénario")
+    selected = next((s for s in scenarios if s["id"] == scenario_id), None)
+    if selected is None:
+        return html.H3("Scénario inconnu")
+    actions_list = html.Ul([html.Li(action) for action in selected["actions"]])
+    return html.Div([
+        html.H3(selected["name"], className="section-title", style={"paddingBottom": "10px"}),
+        html.P(selected["description"]),
+        html.P("Condition : " + selected["condition"]),
+        html.H4("Actions à exécuter :", style={"paddingTop": "10px"}),
+        actions_list,
+        html.Button("Exécuter le scénario", id="execute-scenario", n_clicks=0, style={"marginTop": "20px"})
+    ], className="card", style={
+        "padding": "20px",
+        "backgroundColor": "#1E293B",
+        "border": "1px solid #334155",
+        "borderRadius": "8px"
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
