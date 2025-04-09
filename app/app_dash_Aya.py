@@ -616,7 +616,11 @@ html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
     font-weight: 600 !important;
     color: #2C3E50 !important;
 }
-            .DateInput, .SingleDatePickerInput { background-color: #0F172A !important; border: 1px solid #475569 !important; border-radius: 6px !important; }
+            .DateInput {
+                width: 250px !important; /* Augmentez cette valeur selon vos besoins */
+                max-width: 300px !important;
+            }, 
+            .SingleDatePickerInput { background-color: #0F172A !important; border: 1px solid #475569 !important; border-radius: 6px !important; }
             .DateInput_input, 
                 input[type="text"] {
                     color: #3498DB !important;
@@ -830,17 +834,29 @@ app.layout = html.Div([
                 ),
                 html.H4("Date", className="filter-category"),
                 html.Div([
-                    dcc.DatePickerSingle(
-                        id='date-picker',
-                        min_date_allowed=min_date.date(),
-                        max_date_allowed=max_date.date(),
-                        date=max_date.date(),
-                        display_format='YYYY-MM-DD',
-                        with_portal=True,
-                        first_day_of_week=1
-                    ),
-                    html.Small("Données disponibles du 3 déc. 2024 au 31 jan. 2025", className="date-help-text")
-                ], className="date-picker-container"),
+                dcc.DatePickerSingle(
+                    id='date-picker',
+                    min_date_allowed=min_date.date(),
+                    max_date_allowed=max_date.date(),
+                    date=max_date.date(),
+                    display_format='YYYY-MM-DD',
+                    with_portal=True,
+                    first_day_of_week=1
+                ),
+                html.Div([
+                    html.Span("📅", style={'marginRight': '5px', 'opacity': '0.7'}),
+                    html.Small(
+                        "Données disponibles du 3 déc. 2024 au 31 jan. 2025", 
+                        style={
+                            'color': '#3498DB',
+                            'opacity': '0.7',
+                            'fontStyle': 'italic',
+                            'display': 'inline-flex',
+                            'alignItems': 'center'
+                        }
+                    )
+                ], style={'display': 'flex', 'alignItems': 'center', 'marginTop': '5px'})
+            ], className="date-picker-container"),
                 html.H4("Heure", className="filter-category"),
                 html.Div([
                     dcc.Dropdown(
