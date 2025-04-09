@@ -119,69 +119,79 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
             values="nb_alertes",
             hole=0.5,
             title=f"Répartition par {attr.replace('_', ' ').title()}",
-            template="plotly_dark",
-            color_discrete_sequence=px.colors.sequential.Blues_r
+            template="plotly_white",  # Changement de template
+            color_discrete_sequence=px.colors.sequential.Blues  # Palette de bleus
         )
         pie_fig.update_layout(
             margin=dict(l=10, r=10, t=50, b=10),
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5,
-                        font=dict(color='#E2E8F0', size=11)),
-            title=dict(font=dict(size=16, color='#60A5FA'), x=0.5),
-            paper_bgcolor='#1E293B',
-            plot_bgcolor='#1E293B',
-            font=dict(color='#E2E8F0')
+            legend=dict(
+                orientation="h", 
+                yanchor="bottom", 
+                y=-0.2, 
+                xanchor="center", 
+                x=0.5,
+                font=dict(color='#2C3E50', size=11)
+            ),
+            title=dict(font=dict(size=16, color='#3498DB'), x=0.5),
+            paper_bgcolor='#F2F3F4',  # Fond blanc/bleu clair
+            plot_bgcolor='#F2F3F4',
+            font=dict(color='#2C3E50')
         )
-        pie_charts.append(html.Div(
-            dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
-            className="card",
-            style={'width': 'calc(50% - 30px)', 'margin': '10px'}
-        ))
+        pie_charts.append(
+            html.Div(
+                dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
+                style={'width': 'calc(50% - 30px)', 'margin': '10px'}
+            )
+        )
 
-    # Tendance temporelle des anomalies
-    time_trend = historical_df[historical_df["anomalie"]].groupby(
-        pd.Grouper(key='date_hour', freq='D')
-    ).size().reset_index(name='count')
-    trend_fig = px.line(
-        time_trend,
-        x='date_hour',
-        y='count',
-        template="plotly_dark",
-        title="Évolution des anomalies dans le temps",
-        labels={"count": "Nombre d'anomalies", "date_hour": "Date"}
-    )
-    trend_fig.update_traces(
-        line=dict(color='#38BDF8', width=3),
-        mode='lines+markers',
-        marker=dict(size=8, color='#0EA5E9')
-    )
-    trend_fig.update_layout(
-        margin=dict(l=10, r=10, t=50, b=30),
-        title=dict(font=dict(size=16, color='#60A5FA'), x=0.5),
-        paper_bgcolor='#1E293B',
-        plot_bgcolor='#1E293B',
-        font=dict(color='#E2E8F0'),
-        xaxis=dict(showgrid=True, gridcolor='rgba(150, 150, 150, 0.1)', title_font=dict(size=12)),
-        yaxis=dict(showgrid=True, gridcolor='rgba(150, 150, 150, 0.1)', title_font=dict(size=12)),
-        height=300
-    )
-    trend_chart = html.Div(
-        dcc.Graph(figure=trend_fig, config={'displayModeBar': False}),
-        className="card",
-        style={'width': 'calc(100% - 20px)', 'margin': '10px'}
-    )
+    # Disposition des graphiques en 2x2
+    charts_layout = html.Div([
+        html.Div(pie_charts[:2], style={'display': 'flex', 'justifyContent': 'space-between'}),
+        html.Div(pie_charts[2:], style={'display': 'flex', 'justifyContent': 'space-between', 'marginTop': '20px'})
+    ])
+
+    volume_details = []
+    for attr in attrs:
+        df_attr = historical_df[historical_df["anomalie"]]
+        total_volume = df_attr.shape[0]
+        limit = 3 if attr in ["code_departement", "boucle"] else 5
+        counts = df_attr.groupby(attr).size().reset_index(name="nb_alertes")
+        top_items = counts.sort_values("nb_alertes", ascending=False).head(limit)
+        volume_details.append(html.Div([
+            html.H4(attr.replace('_', ' ').title(), className="highlight", style={'fontSize': '0.9em', 'marginBottom': '10px'}),
+            html.P(f"Volume total d'anomalies: {total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)", 
+                   style={'fontSize': '10px', 'marginBottom': '5px'}),
+            html.Ul([
+                html.Li(f"{row[attr]} : {row['nb_alertes']} alertes", 
+                        style={'fontSize': '10px', 'lineHeight': '1.3'}) 
+                for _, row in top_items.iterrows()
+            ], style={'paddingLeft': '15px'})
+        ], className="card", style={
+            'width': 'calc(25% - 10px)', 
+            'margin': '5px', 
+            'padding': '10px',
+            'border': '1px solid #FFFFFF',
+            'borderRadius': '8px'
+        }))
 
     return html.Div([
         html.H2("Tableau de bord des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
-        trend_chart,
+        html.H3("Détails des volumes d'anomalies", className="highlight", style={'fontSize': '1em'}),
+        html.Div(volume_details, style={
+            "display": "flex", 
+            "flexWrap": "wrap", 
+            "justifyContent": "space-between"
+        }),
         html.H3("Répartition des anomalies", className="section-title"),
-        html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap", "justifyContent": "space-between"})
-    ])
+        charts_layout
+    ], style={'backgroundColor': '#F2F3F4', 'padding': '20px', 'borderRadius': '8px'})
+
 
 def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     if not selected_olt:
         return html.Div([
-            html.H2("Visualisation OLT", className="page-title", style={"marginTop": "0"}),
+            html.H2("Visualisation Réseau", className="page-title", style={"marginTop": "0"}),
             html.Div([
                 html.P("Veuillez sélectionner un OLT pour afficher les données", style={"color": "#CBD5E1"}),
                 html.Div(html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}),
@@ -437,6 +447,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         table
     ])
 
+
 # Pour l'onglet Journal, on calcule le ratio avec les mêmes critères que dans le Dashboard
 def create_journal_content(journal_df, selected_anomaly_col, start_datetime, selected_datetime, window_length_days, selected_source):
     # Ici, journal_df est déjà filtré sur l'anomalie
@@ -510,6 +521,15 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
         className="export-link",
         style={"marginTop": "15px", "display": "inline-block"}
     )
+    download_link = html.A(
+        html.Div([html.I(className="fas fa-download", style={"marginRight": "8px"}), "Exporter en CSV"],
+                 style={"display": "flex", "alignItems": "center"}),
+        href=f"data:text/csv;base64,{csv_data}",
+        download="journal_anomalies.csv",
+        className="export-link",
+        style={"marginTop": "15px", "display": "inline-block"}
+    )
+
     return html.Div([
         html.H2("Journal des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
@@ -517,21 +537,43 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
             dash.dash_table.DataTable(
                 data=journal_df.to_dict("records"),
                 columns=table_columns,
-                style_table={'overflowX': 'auto'},
-                style_data={'backgroundColor': '#1E293B', 'color': '#E2E8F0', 'border': '1px solid #334155'},
-                style_header={'backgroundColor': '#0F172A', 'color': '#38BDF8', 'fontWeight': 'bold',
-                              'border': '1px solid #334155', 'textAlign': 'left'},
-                style_cell={'padding': '10px', 'fontFamily': 'Inter, sans-serif', 'textAlign': 'left'},
-                style_data_conditional=[{
-                    'if': {'column_id': 'Anomalie', 'filter_query': '{Anomalie} eq "Oui"'},
-                    'backgroundColor': 'rgba(239, 68, 68, 0.2)',
-                    'color': '#EF4444'
+                style_table={'overflowX': 'auto'},  #
+                style_filter={
+        'backgroundColor': '#1E293B',
+        'color': '#E2E8F0',
+        'border': '1px solid #334155',
+        'fontFamily': 'Inter, sans-serif',
+        'padding': '8px'
+    }
+            ,
+            style_data={
+                'backgroundColor': '#1E293B', 
+                'color': '#E2E8F0', 
+                'border': '1px solid #334155'
+            },
+            style_header={
+                'backgroundColor': '#0F172A', 
+                'color': '#38BDF8', 
+                'fontWeight': 'bold',
+                'border': '1px solid #334155', 
+                'textAlign': 'left'
+            },
+            style_cell={
+                'padding': '10px', 
+                'fontFamily': 'Inter, sans-serif', 
+                'textAlign': 'left',
+                'backgroundColor': '#1E293B'  # Assurez-vous que le fond est sombre
+            },
+            style_data_conditional=[{
+                'if': {'column_id': 'Anomalie', 'filter_query': '{Anomalie} eq "Oui"'},
+                'backgroundColor': 'rgba(239, 68, 68, 0.2)',
+                'color': '#EF4444'
                 }],
                 page_size=15,
                 page_action="native",
                 sort_action="native",
                 filter_action="native",
-                export_format="csv",
+                export_format=None,
                 row_selectable="multi",
                 selected_rows=[],
                 style_as_list_view=True
@@ -848,7 +890,7 @@ app.layout = html.Div([
                     html.Small(
                         "Données disponibles du 3 déc. 2024 au 31 jan. 2025", 
                         style={
-                            'color': '#3498DB',
+                            'color': '#CDCDCB',
                             'opacity': '0.7',
                             'fontStyle': 'italic',
                             'display': 'inline-flex',
@@ -1061,7 +1103,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
     if pathname == '/dashboard':
         historical_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] <= selected_datetime)].copy()
         historical_df["anomalie"] = historical_df[selected_anomaly_col]
-        attrs = ["code_departement", "type_olt_model", "type_boucle", "boucle"]
+        attrs = ["code_departement", "type_olt_model", "type_boucle", "boucle", "moment_journee"]
         pie_charts = []
         for attr in attrs:
             counts = historical_df[historical_df["anomalie"]].groupby(attr).size().reset_index(name="nb_alertes")
@@ -1077,7 +1119,9 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
             pie_fig.update_layout(
                 margin=dict(l=10, r=10, t=30, b=10),
                 legend=dict(font_color='#e0e0e0'),
-                font=dict(size=10)
+                font=dict(size=10),
+                paper_bgcolor='rgba(0,0,0,0)',  # Fond transparent pour les graphes
+                plot_bgcolor='rgba(0,0,0,0)',   # Fond de la zone de tracé transparent
             )
             pie_charts.append(html.Div(
                 dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
