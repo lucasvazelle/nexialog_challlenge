@@ -98,14 +98,14 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
     ratio = (total_anomalies / total_olts * 100) if total_olts > 0 else 0
 
     stats_cards = html.Div([
-        html.Div([
-            html.H2(f"{total_anomalies} ({ratio:.1f}%)", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("Volume total d'anomalies", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "220px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
-        html.Div([
-            html.H2(f"{total_olts}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("OLTs affectés", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "200px"})
+    html.Div([
+        html.H2(f"{total_anomalies} ({ratio:.1f}%)", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem", "fontWeight": "bold"}),
+        html.P("Volume total d'anomalies", style={"margin": "0", "color": "#94A3B8"})
+    ], className="card", style={"textAlign": "center", "width": "220px", 'border': '0.5px solid #FFFFFF', 'borderRadius': '8px'}),
+    html.Div([
+        html.H2(f"{total_olts}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem", "fontWeight": "bold"}),
+        html.P("OLTs affectés", style={"margin": "0", "color": "#94A3B8"})
+    ], className="card", style={"textAlign": "center", "width": "200px"})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
 
     # Création des graphiques en secteurs
@@ -159,9 +159,17 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
         counts = df_attr.groupby(attr).size().reset_index(name="nb_alertes")
         top_items = counts.sort_values("nb_alertes", ascending=False).head(limit)
         volume_details.append(html.Div([
-            html.H4(attr.replace('_', ' ').title(), className="highlight", style={'fontSize': '0.9em', 'marginBottom': '10px'}),
+            html.H4(attr.replace('_', ' ').title(), className="highlight", style={
+            'fontSize': '1.2em',                # Augmenter la taille de police
+            'fontWeight': '700',                # Mettre en gras
+            'textAlign': 'center',             # Centrer le texte
+            'marginBottom': '12px',            # Espacement en bas
+            'padding': '5px 0',                # Padding vertical
+            'borderBottom': '1px solid #60A5FA', # Bordure en bas pour séparer
+            'color': '#60A5FA'                 # Couleur bleue plus vive
+        }),
             html.P(f"Volume total d'anomalies: {total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)", 
-                   style={'fontSize': '10px', 'marginBottom': '5px'}),
+                    style={'fontSize': '12px', 'textAlign': 'center'}),
             html.Ul([
                 html.Li(f"{row[attr]} : {row['nb_alertes']} alertes", 
                         style={'fontSize': '10px', 'lineHeight': '1.3'}) 
@@ -170,7 +178,7 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
         ], className="card", style={
             'width': 'calc(25% - 10px)', 
             'margin': '5px', 
-            'padding': '10px',
+            'padding': '15px 10px' ,
             'border': '1px solid #FFFFFF',
             'borderRadius': '8px'
         }))
@@ -657,7 +665,7 @@ app.index_string = '''
             }
 
             .nav-bar a:hover { color: #38BDF8; background-color: rgba(15, 23, 42, 0.3); }
-            .nav-bar a.active { color: #38BDF8; background-color: #0F172A; border-bottom: 3px solid #38BDF8; }
+            .nav-bar a.active { color: #38BDF8; background-color: #E5E7EB; border-bottom: 3px solid #38BDF8; }
             main { flex: 1; padding: 30px; }
             footer { background-color: #1E293B; padding: 20px; text-align: center; color: #94A3B8; border-top: 1px solid #334155; }
             footer .partners { margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 20px; }
@@ -688,6 +696,22 @@ app.index_string = '''
     color: #3498DB !important;
 
 }
+/* STYLER LES TITRES DE CARTES */
+            .card h4 {
+                font-size: 1.1em !important;
+                font-weight: 700 !important;
+                text-align: center !important;
+                margin-bottom: 12px !important;
+                padding-bottom: 8px !important;
+                color: #60A5FA !important;
+                border-bottom: 1px solid #60A5FA !important;
+            }
+            
+            /* Centrer le texte des paragraphes dans les cartes */
+            .card p {
+                text-align: center !important;
+            }
+
 html body .Select .Select-menu-outer .Select-menu .Select-option {
     color: #3498DB !important;
     background-color: #FFFFFF !important;
@@ -819,7 +843,7 @@ html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
                         <a href="/dashboard" id="tab-dashboard">ALERTES</a>
                         <a href="/journal" id="tab-journal">JOURNAL</a>
                         <a href="/visual" id="tab-visual">VISUALISATION</a>
-                        <a href="/scenario-builder" id="tab-scenario">SCENARIO</a>
+                        <a href="/scenario-builder" id="tab-scenario-builder">SCENARIO</a>
                         <a href="/map" id="tab-map">CARTE</a>
 
 
@@ -1192,15 +1216,25 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
             top_items = counts.sort_values("nb_alertes", ascending=False).head(limit)
             volume_details.append(html.Div([
                 html.H4(attr.replace('_', ' ').title(), className="highlight"),
-                html.P(f"Volume total d'anomalies: {total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)", style={'fontSize': '12px'}),
-                html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()])
+                html.Div([
+                "Volume total d'anomalies: ",
+                html.Span(f"{total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)",
+                        style={'fontWeight': 'bold', 'color': '#38BDF8'})
+            ], style={
+                'backgroundColor': 'rgba(255, 255, 255, 0.08)',  # Fond 
+                'padding': '8px',
+                'borderRadius': '4px',
+                'marginBottom': '10px',
+                'textAlign': 'center'
+            }),
+            html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()])
             ], className="card", style={'width': '300px', 'border': '1px solid #FFFFFF','borderRadius': '8px'}))
         return html.Div([
         html.H2("DÉTAILS DES VOLUMES D'ANOMALIES", className="page-title", style={
             "marginTop": "10px",
             "marginBottom": "25px",
             "color": "#60A5FA",
-            "fontSize": "1.3em",
+            "fontSize": "1em",
             "fontWeight": "700",
             "textTransform": "uppercase",
             "letterSpacing": "0.5px",
@@ -1222,7 +1256,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
         "marginTop": "30px",
         "marginBottom": "25px",
         "color": "#60A5FA",
-        "fontSize": "1.3em",
+        "fontSize": "1em",
         "fontWeight": "700",
         "textTransform": "uppercase",
         "letterSpacing": "0.5px",
