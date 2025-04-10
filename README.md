@@ -5,28 +5,45 @@ Notre objectif est de construire un modèle de **détection d’anomalies sur le
 
 ---
 
-## Objectif du projet
+## Lancer l'application de détection d'anomalie
 
-Identifier les zones du réseau (OLT, PEAG...) susceptibles de subir des **interruptions simultanées**, **sans supervision** (pas de variable cible), en exploitant les résultats des tests techniques effectués sur les box client.
+### En local
 
----
+1. Installer les dépendances
+$ pip install -r requirements.txt
+
+2. Lancer
+$ python app.py
+
+### Avec Docker
+
+1. Installer docker 
+$ sudo apt docker
+
+2. Build l'image OU pull l'image
+$ docker build -t nexialog .
+ou
+$ docker pull lucasvazelle/nexialog
+
+3. Lancer
+$docker run nexialog
+$docker run lucasvazelle/nexialog
+
 
 ## Structure du projet
 
-#### 📁 `S1: analyse_exploratoire_V1.ipynb`
+#### `src.domain.Pre_traitement_data*' et 'src.sandbow.*'
 - Preprocessing des données brutes: Nettoyage, vérifications, premières statistiques descriptives.
-- Identification des colonnes pertinentes (tests DNS / tests scoring).
 
-#### 📁 `S2: etape2_finale.ipynb`
-- Agrégation des données par `date-hour` et `olt_name`.
-- Data Engineering : rajout de variables potentiellement pertinentes pour la détéction d'anomalies
-  
-#### 📁 `S3: séparation des tables et data viz`
-- Séparation des jeux de données (à ne pas faire) .
-- Data visualisation exploratoire sur différentes combinaisons (OLT, PEAG, etc.).
+####`src.domain.Agregation_at_level_OLT_PEAG.ipynb'
+- Agrégation des données
+- Feature  Engineering
+-
+#### `src.models;*.ipynb`
+- Méthodes économétrique :  **jump**
+- Méthode **DBSCAN**
+- Méthode **isolation forest**
 
-#### 📁 `S4: etape4_model_sans_ml.ipynb`
-- Modélisation sans un modèle de ML.
-- Utilisation de **méthodes de "jump detection"** (changements brusques) pour identifier des ruptures dans les indicateurs de performance (latence, etc.).
-  
----
+#### `src.app.`
+- Application dash permettant la visualisation des résultats de nos modèles de détection
+

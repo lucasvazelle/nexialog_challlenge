@@ -43,8 +43,8 @@ scenarios = [
 # 2. Chargement des données depuis les deux sources
 def load_data_sources():
     # Charger les deux fichiers Parquet
-    df_olt = pd.read_parquet("../data/data_with_anomalies_OLT_with_jump_and_DB_SCAN.parquet")
-    df_peag = pd.read_parquet("../data/data_with_anomalies_PEAG_with_jump_and_DB_SCAN.parquet")
+    df_olt = pd.read_parquet("https://storage.googleapis.com/bucket-projet-gestion-bdd/datasorbonne/data_with_anomalies_OLT_with_jump_and_DB_SCAN.parquet")
+    df_peag = pd.read_parquet("https://storage.googleapis.com/bucket-projet-gestion-bdd/datasorbonne/data_with_anomalies_PEAG_with_jump_and_DB_SCAN.parquet")
 
     # Liste des colonnes à retirer
     columns_to_drop = [
@@ -98,14 +98,14 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
     ratio = (total_anomalies / total_olts * 100) if total_olts > 0 else 0
 
     stats_cards = html.Div([
-        html.Div([
-            html.H2(f"{total_anomalies} ({ratio:.1f}%)", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("Volume total d'anomalies", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "220px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
-        html.Div([
-            html.H2(f"{total_olts}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("OLTs affectés", style={"margin": "0", "color": "#94A3B8"})
-        ], className="card", style={"textAlign": "center", "width": "200px"})
+    html.Div([
+        html.H2(f"{total_anomalies} ({ratio:.1f}%)", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem", "fontWeight": "bold"}),
+        html.P("Volume total d'anomalies", style={"margin": "0", "color": "#94A3B8"})
+    ], className="card", style={"textAlign": "center", "width": "220px", 'border': '0.5px solid #FFFFFF', 'borderRadius': '8px'}),
+    html.Div([
+        html.H2(f"{total_olts}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem", "fontWeight": "bold"}),
+        html.P("OLTs affectés", style={"margin": "0", "color": "#94A3B8"})
+    ], className="card", style={"textAlign": "center", "width": "200px"})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
 
     # Création des graphiques en secteurs
@@ -119,75 +119,123 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
             values="nb_alertes",
             hole=0.5,
             title=f"Répartition par {attr.replace('_', ' ').title()}",
-            template="plotly_dark",
-            color_discrete_sequence=px.colors.sequential.Blues_r
+            template="plotly_white",  # Changement de template
+            color_discrete_sequence=px.colors.sequential.Blues  # Palette de bleus
         )
         pie_fig.update_layout(
             margin=dict(l=10, r=10, t=50, b=10),
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5,
-                        font=dict(color='#E2E8F0', size=11)),
-            title=dict(font=dict(size=16, color='#60A5FA'), x=0.5),
-            paper_bgcolor='#1E293B',
-            plot_bgcolor='#1E293B',
-            font=dict(color='#E2E8F0')
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.2,
+                xanchor="center",
+                x=0.5,
+                font=dict(color='#e0e0e0', size=10),
+                height=3
+            ),
+            title=dict(font=dict(size=16, color='#3498DB'), x=0.5),
+            paper_bgcolor='#F2F3F4',  # Fond blanc/bleu clair
+            plot_bgcolor='#F2F3F4',
+            font=dict(color='#2C3E50')
         )
-        pie_charts.append(html.Div(
-            dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
-            className="card",
-            style={'width': 'calc(50% - 30px)', 'margin': '10px'}
-        ))
+        pie_charts.append(
+            html.Div(
+                dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
+                style={'width': 'calc(50% - 30px)', 'margin': '10px'}
+            )
+        )
 
-    # Tendance temporelle des anomalies
-    time_trend = historical_df[historical_df["anomalie"]].groupby(
-        pd.Grouper(key='date_hour', freq='D')
-    ).size().reset_index(name='count')
-    trend_fig = px.line(
-        time_trend,
-        x='date_hour',
-        y='count',
-        template="plotly_dark",
-        title="Évolution des anomalies dans le temps",
-        labels={"count": "Nombre d'anomalies", "date_hour": "Date"}
-    )
-    trend_fig.update_traces(
-        line=dict(color='#38BDF8', width=3),
-        mode='lines+markers',
-        marker=dict(size=8, color='#0EA5E9')
-    )
-    trend_fig.update_layout(
-        margin=dict(l=10, r=10, t=50, b=30),
-        title=dict(font=dict(size=16, color='#60A5FA'), x=0.5),
-        paper_bgcolor='#1E293B',
-        plot_bgcolor='#1E293B',
-        font=dict(color='#E2E8F0'),
-        xaxis=dict(showgrid=True, gridcolor='rgba(150, 150, 150, 0.1)', title_font=dict(size=12)),
-        yaxis=dict(showgrid=True, gridcolor='rgba(150, 150, 150, 0.1)', title_font=dict(size=12)),
-        height=300
-    )
-    trend_chart = html.Div(
-        dcc.Graph(figure=trend_fig, config={'displayModeBar': False}),
-        className="card",
-        style={'width': 'calc(100% - 20px)', 'margin': '10px'}
-    )
+    # Disposition des graphiques en 2x2
+    charts_layout = html.Div([
+        html.Div(pie_charts[:2], style={'display': 'flex', 'justifyContent': 'space-between'}),
+        html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap", "justifyContent": "center", "gap": "20px"})
+    ])
+
+    volume_details = []
+    for attr in attrs:
+        df_attr = historical_df[historical_df["anomalie"]]
+        total_volume = df_attr.shape[0]
+        limit = 3 if attr in ["code_departement", "boucle"] else 5
+        counts = df_attr.groupby(attr).size().reset_index(name="nb_alertes")
+        top_items = counts.sort_values("nb_alertes", ascending=False).head(limit)
+        volume_details.append(html.Div([
+            html.H4(attr.replace('_', ' ').title(), className="highlight", style={
+            'fontSize': '1.2em',                # Augmenter la taille de police
+            'fontWeight': '700',                # Mettre en gras
+            'textAlign': 'center',             # Centrer le texte
+            'marginBottom': '12px',            # Espacement en bas
+            'padding': '5px 0',                # Padding vertical
+            'borderBottom': '1px solid #60A5FA', # Bordure en bas pour séparer
+            'color': '#60A5FA'                 # Couleur bleue plus vive
+        }),
+            html.P(f"Volume total d'anomalies: {total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)",
+                    style={'fontSize': '12px', 'textAlign': 'center'}),
+            html.Ul([
+                html.Li(f"{row[attr]} : {row['nb_alertes']} alertes",
+                        style={'fontSize': '10px', 'lineHeight': '1.3'})
+                for _, row in top_items.iterrows()
+            ], style={'paddingLeft': '15px'})
+        ], className="card", style={
+            'width': 'calc(25% - 10px)',
+            'margin': '5px',
+            'padding': '15px 10px' ,
+            'border': '1px solid #FFFFFF',
+            'borderRadius': '8px'
+        }))
 
     return html.Div([
         html.H2("Tableau de bord des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
-        trend_chart,
+        html.H3("Détails des volumes d'anomalies", className="highlight", style={'fontSize': '1em'}),
+        html.Div(volume_details, style={
+            "display": "flex",
+            "flexWrap": "wrap",
+            "justifyContent": "center"   #"space-between"
+        }),
         html.H3("Répartition des anomalies", className="section-title"),
-        html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap", "justifyContent": "space-between"})
-    ])
+        charts_layout
+    ], style={'backgroundColor': '#F2F3F4', 'padding': '20px', 'borderRadius': '8px'})
+
 
 def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     if not selected_olt:
         return html.Div([
-            html.H2("Visualisation OLT", className="page-title", style={"marginTop": "0"}),
+            html.H2("VISUALISATION DES ANOMALIES", className="page-title", style={
+            "marginTop": "0",
+            "color": "#60A5FA",
+            "fontSize": "1.8em",
+            "fontWeight": "700",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.5px",
+            "marginBottom": "20px",
+            "borderBottom": "2px solid #334155",
+            "paddingBottom": "10px"
+    }),
+    stats_cards,
             html.Div([
-                html.P("Veuillez sélectionner un OLT pour afficher les données", style={"color": "#CBD5E1"}),
-                html.Div(html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}),
-                         style={"textAlign": "center", "margin": "40px 0"})
-            ], style={"textAlign": "center", "padding": "40px"}, className="card")
-        ])
+                html.P("Veuillez séléctionner un OLT pour afficher les données", style={"color": "#CBD5E1", "fontSize": "1.2rem"}),
+                html.Div(
+                    html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}),
+                    style={"textAlign": "center", "margin": "40px 0"}
+                )
+            ], className="card", style={
+                "textAlign": "center",
+                "padding": "40px",
+                "width": "100%",
+                "border": "1px solid #334155",
+                "borderRadius": "8px",
+                "backgroundColor": "#1E293B",
+            })
+        ], style={
+            'backgroundColor': '#1E293B',
+            'padding': '20px',
+            'borderRadius': '8px',
+            'width': '100%',
+            'minHeight': '600px',
+            'border': '1px solid #334155',
+            'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)'
+        })
+
 
     y_col = "avg_dns_time"
     metric_name = "DNS"
@@ -214,7 +262,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
 
     stats_cards = html.Div([
         html.Div([
-            html.H3("Réseau sélectionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
+            html.H3("Réseau séléctionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.H2(f"{selected_olt}", style={"margin": "5px 0", "color": "#E2E8F0", "fontSize": "1.5rem"})
         ], className="card", style={"width": "250px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
@@ -336,17 +384,28 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     ], className="card", style={"width": "100%", "marginTop": "20px"})
 
     return html.Div([
-        html.H2("Visualisation Réseau", className="page-title", style={"marginTop": "0"}),
-        stats_cards,
-        html.Div([ dcc.Graph(figure=fig_ts, config={'displayModeBar': 'hover'}) ], className="card"),
-        html.Div([
-            html.Div([ dcc.Graph(figure=hist_fig, config={'displayModeBar': False}) ],
-                     className="card", style={"width": "calc(50% - 15px)"}),
-            html.Div([ dcc.Graph(figure=hour_fig, config={'displayModeBar': False}) ],
-                     className="card", style={"width": "calc(50% - 15px)"})
-        ], style={"display": "flex", "gap": "30px", "marginTop": "20px"}),
-        summary_card
-    ])
+    html.H2("VISUALISATION DES ANOMALIES", className="page-title", style={
+        "marginTop": "0",
+        "color": "#60A5FA",
+        "fontSize": "1.8em",
+        "fontWeight": "700",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.5px",
+        "marginBottom": "20px",
+        "borderBottom": "2px solid #334155",
+        "paddingBottom": "10px"
+    }),
+    stats_cards,
+    html.Div([ dcc.Graph(figure=fig_ts, config={'displayModeBar': 'hover'}) ], className="card"),
+    html.Div([
+        html.Div([ dcc.Graph(figure=hist_fig, config={'displayModeBar': False}) ],
+                className="card", style={"width": "calc(50% - 15px)"}),
+        html.Div([ dcc.Graph(figure=hour_fig, config={'displayModeBar': False}) ],
+                className="card", style={"width": "calc(50% - 15px)"})
+    ], style={"display": "flex", "gap": "30px", "marginTop": "20px"}),
+    summary_card
+])
+
 
 def create_map_content(historical_df, selected_anomaly_col, start_datetime, selected_datetime, window_length_days):
     # Normalisation par jour pour la carte
@@ -367,7 +426,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         ], className="card", style={"textAlign": "center", "width": "230px",  'border': '1px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{dep_stats['nb_alertes'].max()}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("Max anomalies dans un département", style={"margin": "0", "color": "#94A3B8"})
+            html.P("Max d'anomalies dans un département", style={"margin": "0", "color": "#94A3B8"})
         ], className="card", style={"textAlign": "center", "width": "280px",  'border': '1px solid #FFFFFF','borderRadius': '8px'})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
 
@@ -436,6 +495,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         html.Div([dcc.Graph(figure=fig_map, style={'width': '100%', 'height': '600px'})], className="card"),
         table
     ])
+
 
 # Pour l'onglet Journal, on calcule le ratio avec les mêmes critères que dans le Dashboard
 def create_journal_content(journal_df, selected_anomaly_col, start_datetime, selected_datetime, window_length_days, selected_source):
@@ -510,6 +570,15 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
         className="export-link",
         style={"marginTop": "15px", "display": "inline-block"}
     )
+    download_link = html.A(
+        html.Div([html.I(className="fas fa-download", style={"marginRight": "8px"}), "Exporter en CSV"],
+                 style={"display": "flex", "alignItems": "center"}),
+        href=f"data:text/csv;base64,{csv_data}",
+        download="journal_anomalies.csv",
+        className="export-link",
+        style={"marginTop": "15px", "display": "inline-block"}
+    )
+
     return html.Div([
         html.H2("Journal des anomalies", className="page-title", style={"marginTop": "0"}),
         stats_cards,
@@ -517,21 +586,43 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
             dash.dash_table.DataTable(
                 data=journal_df.to_dict("records"),
                 columns=table_columns,
-                style_table={'overflowX': 'auto'},
-                style_data={'backgroundColor': '#1E293B', 'color': '#E2E8F0', 'border': '1px solid #334155'},
-                style_header={'backgroundColor': '#0F172A', 'color': '#38BDF8', 'fontWeight': 'bold',
-                              'border': '1px solid #334155', 'textAlign': 'left'},
-                style_cell={'padding': '10px', 'fontFamily': 'Inter, sans-serif', 'textAlign': 'left'},
-                style_data_conditional=[{
-                    'if': {'column_id': 'Anomalie', 'filter_query': '{Anomalie} eq "Oui"'},
-                    'backgroundColor': 'rgba(239, 68, 68, 0.2)',
-                    'color': '#EF4444'
+                style_table={'overflowX': 'auto'},  #
+                style_filter={
+        'backgroundColor': '#1E293B',
+        'color': '#E2E8F0',
+        'border': '1px solid #334155',
+        'fontFamily': 'Inter, sans-serif',
+        'padding': '8px'
+    }
+            ,
+            style_data={
+                'backgroundColor': '#1E293B',
+                'color': '#E2E8F0',
+                'border': '1px solid #334155'
+            },
+            style_header={
+                'backgroundColor': '#0F172A',
+                'color': '#38BDF8',
+                'fontWeight': 'bold',
+                'border': '1px solid #334155',
+                'textAlign': 'left'
+            },
+            style_cell={
+                'padding': '10px',
+                'fontFamily': 'Inter, sans-serif',
+                'textAlign': 'left',
+                'backgroundColor': '#1E293B'  # Assurez-vous que le fond est sombre
+            },
+            style_data_conditional=[{
+                'if': {'column_id': 'Anomalie', 'filter_query': '{Anomalie} eq "Oui"'},
+                'backgroundColor': 'rgba(239, 68, 68, 0.2)',
+                'color': '#EF4444'
                 }],
                 page_size=15,
                 page_action="native",
                 sort_action="native",
                 filter_action="native",
-                export_format="csv",
+                export_format=None,
                 row_selectable="multi",
                 selected_rows=[],
                 style_as_list_view=True
@@ -544,7 +635,7 @@ def create_journal_content(journal_df, selected_anomaly_col, start_datetime, sel
 app = dash.Dash(__name__)
 app.title = "Anomalie Network Dashboard"
 app.config.suppress_callback_exceptions = True  # Permet d'utiliser des callbacks sur des composants chargés dynamiquement
-
+server = app.server
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -567,8 +658,14 @@ app.index_string = '''
             .header-right { text-align: right; }
             .nav-bar { display: flex; gap: 5px; justify-content: flex-end; }
             .nav-bar a { color: #CBD5E1; text-decoration: none; font-size: 1.05em; font-weight: 600; transition: all 0.2s; padding: 10px 20px; border-radius: 8px 8px 0 0; text-transform: uppercase; letter-spacing: 0.5px; position: relative; }
+
+            #tab-visual {
+            padding-left: 30px !important;
+            padding-right: 30px !important;
+            }
+
             .nav-bar a:hover { color: #38BDF8; background-color: rgba(15, 23, 42, 0.3); }
-            .nav-bar a.active { color: #38BDF8; background-color: #0F172A; border-bottom: 3px solid #38BDF8; }
+            .nav-bar a.active { color: #38BDF8; background-color: #E5E7EB; border-bottom: 3px solid #38BDF8; }
             main { flex: 1; padding: 30px; }
             footer { background-color: #1E293B; padding: 20px; text-align: center; color: #94A3B8; border-top: 1px solid #334155; }
             footer .partners { margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 20px; }
@@ -586,30 +683,124 @@ app.index_string = '''
             .card h2 { font-size: 2.5rem; font-weight: 700; margin: 0; color: #38BDF8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
             .card h3 { color: #94A3B8; font-size: 1rem; font-weight: 500; margin: 0; }
             .card p { color: #CBD5E1; }
-            .Select-control, .Select-menu-outer { background-color: #0F172A !important; color: #E2E8F0 !important; border: 1px solid #475569 !important; border-radius: 6px !important; }
-            .Select-value-label { color: #E2E8F0 !important; }
-            .Select-menu-outer { background-color: #0F172A !important; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important; }
-            .Select-option { background-color: #0F172A !important; color: #E2E8F0 !important; }
-            .Select-option.is-focused { background-color: #2D3D50 !important; }
-            .DateInput, .SingleDatePickerInput { background-color: #0F172A !important; border: 1px solid #475569 !important; border-radius: 6px !important; }
-            .DateInput_input { color: #E2E8F0 !important; background-color: #0F172A !important; font-family: 'Inter', sans-serif !important; }
+            .Select-control {
+            border-color: #3498DB !important; },
+            .Select-menu-outer { background-color: #0F172A !important; color: #E2E8F0 !important; border: 1px solid #475569 !important; border-radius: 6px !important; }
+.Select-value-label {
+    color: #3498DB !important;  /* Bleu plus clair et harmonieux */
+    }
+.Select-menu-outer {
+    background-color: #F8F9F9 !important; /* Fond clair */
+    border: 1px solid #3498DB !important; /* Bordure bleue */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+    color: #3498DB !important;
+
+}
+/* STYLER LES TITRES DE CARTES */
+            .card h4 {
+                font-size: 1.1em !important;
+                font-weight: 700 !important;
+                text-align: center !important;
+                margin-bottom: 12px !important;
+                padding-bottom: 8px !important;
+                color: #60A5FA !important;
+                border-bottom: 1px solid #60A5FA !important;
+            }
+
+            /* Centrer le texte des paragraphes dans les cartes */
+            .card p {
+                text-align: center !important;
+            }
+
+html body .Select .Select-menu-outer .Select-menu .Select-option {
+    color: #3498DB !important;
+    background-color: #FFFFFF !important;
+}
+
+/* Style encore plus spécifique pour l'option sélectionnée */
+html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
+    background-color: #E8F4FC !important;
+    color: #2980B9 !important;
+    font-weight: 600 !important;
+}
+,
+html body .Select .Select-menu-outer .Select-menu .Select-option.is-focused {
+    background-color: #E8F4FC !important;
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+}
+            .DateInput {
+                width: 250px !important; /* Augmentez cette valeur selon vos besoins */
+                max-width: 300px !important;
+            },
+            .SingleDatePickerInput { background-color: #0F172A !important; border: 1px solid #475569 !important; border-radius: 6px !important; }
+            .DateInput_input,
+                input[type="text"] {
+                    color: #3498DB !important;
+                    background-color: #F8F9F9 !important;
+                    font-size: 0.9rem;  /* Réduction de la taille de police */
+                    padding: 5px 10px;  /* Réduction du padding */
+                    height: 34px;  /* Hauteur fixe plus petite */
+                }
             input[type="radio"] { accent-color: #38BDF8; width: 18px; height: 18px; margin-right: 8px; }
-            .radio-label { display: flex; align-items: center; margin-bottom: 10px; color: #CBD5E1; font-weight: 500; cursor: pointer; }
+            .radio-label { display: flex; align-items: center; margin-bottom: 10px; color: #3498DB; font-weight: 500; cursor: pointer; }
         </style>
     </head>
     <style>
-    .left-panel-title { color: #60A5FA; font-size: 1.5em; font-weight: 700; margin-bottom: 20px; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 2px solid #38BDF8; padding-bottom: 8px; }
-    .filter-category { color: #38BDF8; font-size: 1.2em; font-weight: 600; margin-top: 20px; margin-bottom: 10px; letter-spacing: 0.5px; }
-    .radio-item { display: flex; align-items: center; margin-bottom: 10px; transition: transform 0.2s; cursor: pointer; }
+.left-panel-title {
+    color: #2C3E50;  /* Bleu très foncé, presque noir */
+    font-size: 1.2em;
+    font-weight: 700;
+    margin-bottom: 20px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border-bottom: 2px solid #3498DB;
+    padding-bottom: 8px;
+}
+.filter-category {
+    color: #1A5276;  /* Bleu marine foncé */
+    font-size: 1em;
+    font-weight: 700;  /* Un peu plus gras */
+    margin-top: 20px;
+    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+    border-left: 3px solid #3498DB;  /* Une petite bordure à gauche pour du style */
+    padding-left: 8px;  /* Espacement pour la bordure */
+    border-bottom: 1px solid #D6DBDF;  /* Ligne de séparation très subtile */
+    padding-bottom: 8px;  /* Espace pour la ligne */
+    margin-bottom: 15px;  /* Plus d'espace après chaque titre */
+}
+
+
+.radio-item { display: flex; align-items: center; margin-bottom: 10px; transition: transform 0.2s; cursor: pointer; }
     .radio-item:hover { transform: translateX(5px); }
     .radio-item input[type="radio"] { width: 18px; height: 18px; margin-right: 10px; cursor: pointer; accent-color: #60A5FA; }
-    .radio-item label { color: #CBD5E1; font-weight: 500; cursor: pointer; }
+.radio-item label {
+    color: #3498DB !important;  /* Même bleu que les dropdowns */
+    font-weight: 500;
+}
+/* Style pour les boutons radio sélectionnés */
+.radio-item.selected label {
+    color: #2980B9 !important;  /* Bleu légèrement plus foncé quand sélectionné */
+    font-weight: 600;
+}
+
     .radio-item input[type="radio"]:checked + label { color: #FFFFFF; font-weight: 600; }
-    .filter-panel { background-color: #111827; border-radius: 10px; border: 1px solid #1E293B; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 20px; }
-    .filter-dropdown { margin-bottom: 15px; }
+.filter-panel {
+    background-color: #F2F3F4; /* Remplace #111827 par #F2F3F4 */
+    border-radius: 10px;
+    border: 1px solid #D1D5DB; /* Changez aussi la bordure pour qu'elle soit plus claire */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}    .filter-dropdown { margin-bottom: 15px; }
     .filter-dropdown-label { color: #CBD5E1; font-weight: 500; margin-bottom: 8px; display: block; }
-    .date-picker-container { margin-bottom: 20px; }
-    .date-help-text { color: #94A3B8; font-size: 0.85em; font-style: italic; margin-top: 5px; }
+.date-picker-container {
+    margin-bottom: 20px;
+    padding: 5px;
+    background-color: #FFFFFF;  /* Fond blanc pour les contrôles */
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);  /* Ombre très subtile */
+}    .date-help-text { color: #94A3B8; font-size: 0.7em; font-style: italic; margin-top: 3px; }
     .DateInput { border: 1px solid #38BDF8 !important; }
     label { display: block; margin-bottom: 8px; font-weight: 500; color: #CBD5E1; }
     .export-link { display: inline-flex; align-items: center; margin-top: 15px; padding: 10px 18px; background-color: #38BDF8; color: #0F172A; text-decoration: none; border-radius: 6px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
@@ -632,7 +823,8 @@ app.index_string = '''
     .olt-count { display: inline-block; background-color: #38BDF8; color: #0F172A; padding: 3px 8px; border-radius: 20px; font-size: 0.8em; margin-left: 10px; }
     .tooltip-container { position: relative; display: inline-block; margin-left: 10px; }
     .tooltip-icon { color: #60A5FA; cursor: pointer; font-size: 0.9em; }
-    .tooltip-text { visibility: hidden; width: 250px; background-color: #1E293B; color: #CBD5E1; text-align: center; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border: 1px solid #334155; font-size: 0.9em; font-weight: normal; text-transform: none; letter-spacing: normal; }
+    .tooltip-text { visibility: hidden; width: 250px; background-color: #1E293B; color: #CBD5E1; text-align: center; border-radius: 6px; padding: 10px; position: absolute; z-index
+: 1; bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); border: 1px solid #334155; font-size: 0.9em; font-weight: normal; text-transform: none; letter-spacing: normal; }
     .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
     .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th { background-color: #0F172A !important; color: #60A5FA !important; font-weight: 700 !important; padding: 12px 10px !important; border-bottom: 2px solid #334155 !important; text-transform: uppercase; letter-spacing: 0.5px; }
     @media (max-width: 1200px) { .nav-bar { gap: 10px; } .nav-bar a { font-size: 0.8em; padding: 8px 10px; } }
@@ -652,7 +844,7 @@ app.index_string = '''
                         <a href="/dashboard" id="tab-dashboard">ALERTES</a>
                         <a href="/journal" id="tab-journal">JOURNAL</a>
                         <a href="/visual" id="tab-visual">VISUALISATION</a>
-                        <a href="/scenario-builder" id="tab-scenario">SCENARIO</a>
+                        <a href="/scenario-builder" id="tab-scenario-builder">SCENARIO</a>
                         <a href="/map" id="tab-map">CARTE</a>
 
 
@@ -759,17 +951,33 @@ app.layout = html.Div([
                 ),
                 html.H4("Date", className="filter-category"),
                 html.Div([
-                    dcc.DatePickerSingle(
-                        id='date-picker',
-                        min_date_allowed=min_date.date(),
-                        max_date_allowed=max_date.date(),
-                        date=max_date.date(),
-                        display_format='YYYY-MM-DD',
-                        with_portal=True,
-                        first_day_of_week=1
-                    ),
-                    html.Small("Données disponibles du 3 déc. 2024 au 31 jan. 2025", className="date-help-text")
-                ], className="date-picker-container"),
+                dcc.DatePickerSingle(
+                    id='date-picker',
+                    min_date_allowed=min_date.date(),
+                    max_date_allowed=max_date.date(),
+                    date=max_date.date(),
+                    display_format='YYYY-MM-DD',
+                    with_portal=True,
+                    first_day_of_week=1,
+                    style={
+                    'fontWeight': 'bold',  # Ajoutez cette ligne pour mettre en gras
+                    'color': '#3498DB'  # Gardez la couleur bleue si vous le souhaitez
+                }
+                ),
+                html.Div([
+                    html.Span("📅", style={'marginRight': '5px', 'opacity': '0.7'}),
+                    html.Small(
+                        "Données disponibles du 3 déc. 2024 au 31 jan. 2025",
+                        style={
+                            'color': '#CDCDCB',
+                            'opacity': '0.7',
+                            'fontStyle': 'italic',
+                            'display': 'inline-flex',
+                            'alignItems': 'center'
+                        }
+                    )
+                ], style={'display': 'flex', 'alignItems': 'center', 'marginTop': '5px'})
+            ], className="date-picker-container"),
                 html.H4("Heure", className="filter-category"),
                 html.Div([
                     dcc.Dropdown(
@@ -811,7 +1019,7 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='boucle-filter',
                     options=boucle_options,
-                    placeholder="Sélectionnez une Boucle",
+                    placeholder="Séléctionnez une Boucle",
                     multi=True,
                     className="filter-dropdown"
                 ),
@@ -819,25 +1027,29 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='olt-type-filter',
                     options=olt_type_options,
-                    placeholder="Sélectionnez un Type OLT",
+                    placeholder="Séléctionnez un type d'OLT",
                     multi=True,
                     className="filter-dropdown"
                 )
             ], id="journal-filters", style={"display": "none"}, className="filter-panel"),
             html.Div([
-                html.H3("Sélection réseau", className="left-panel-title", style={"marginTop": "20px"}),
+                html.H3("Séléction réseau", className="left-panel-title", style={"marginTop": "20px"}),
                 html.H4("Réseau", className="filter-category"),
                 dcc.Dropdown(
                     id='olt-picker',
                     options=[],
-                    placeholder="Sélectionnez un réseau",
+                    placeholder="Séléctionnez un réseau",
                     className="filter-dropdown"
                 )
             ], id="olt-visual-controls", style={"display": "none"}, className="filter-panel")
-        ], style={'width': '320px',
-        'float': 'left',
-        'border': '1px solid #FFFFFF',
-        'borderRadius': '8px'}),
+        ], style={
+    'width': '320px',
+    'float': 'left',
+    'border': '1px solid #FFFFFF',
+    'borderRadius': '8px',
+    'backgroundColor': '#E6E9EB',  # Cette ligne change tout le fond du cadre
+    'padding': '8px',  # Optionnel: pour plus d'espace
+}),
         html.Div(id="page-content", style={
             'marginLeft': '350px',
             'padding': '20px',
@@ -923,7 +1135,7 @@ scenario_layout = html.Div([
             html.Div(
                 id="scenario-details",
                 children=[
-                    html.H3("Sélectionnez un scénario pour voir les détails",
+                    html.H3("Séléctionnez un scénario pour voir les détails",
                             className="section-title",
                             style={"paddingBottom": "10px"})
                 ],
@@ -970,7 +1182,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
     if pathname == '/dashboard':
         historical_df = df[(df["date_hour"] >= start_datetime) & (df["date_hour"] <= selected_datetime)].copy()
         historical_df["anomalie"] = historical_df[selected_anomaly_col]
-        attrs = ["code_departement", "type_olt_model", "type_boucle", "boucle"]
+        attrs = ["code_departement", "type_olt_model", "type_boucle", "boucle", "moment_journee"]
         pie_charts = []
         for attr in attrs:
             counts = historical_df[historical_df["anomalie"]].groupby(attr).size().reset_index(name="nb_alertes")
@@ -986,11 +1198,15 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
             pie_fig.update_layout(
                 margin=dict(l=10, r=10, t=30, b=10),
                 legend=dict(font_color='#e0e0e0'),
-                font=dict(size=10)
+                font=dict(size=10),
+                paper_bgcolor='rgba(0,0,0,0)',  # Fond transparent pour les graphes
+                plot_bgcolor='rgba(0,0,0,0)',   # Fond de la zone de tracé transparent
+                height=350
             )
             pie_charts.append(html.Div(
                 dcc.Graph(figure=pie_fig, config={'displayModeBar': False}),
-                style={'width': '300px', 'margin': '10px'}
+                style={'width': '300px', 'height': '350px' ,'margin': '10px'}
+
             ))
         volume_details = []
         for attr in attrs:
@@ -1001,15 +1217,66 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
             top_items = counts.sort_values("nb_alertes", ascending=False).head(limit)
             volume_details.append(html.Div([
                 html.H4(attr.replace('_', ' ').title(), className="highlight"),
-                html.P(f"Volume total d'anomalies: {total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)", style={'fontSize': '12px'}),
-                html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()])
+                html.Div([
+                "Volume total d'anomalies: ",
+                html.Span(f"{total_volume} ({(total_volume/len(historical_df)*100 if len(historical_df)>0 else 0):.1f}%)",
+                        style={'fontWeight': 'bold', 'color': '#38BDF8'})
+            ], style={
+                'backgroundColor': 'rgba(255, 255, 255, 0.08)',  # Fond
+                'padding': '8px',
+                'borderRadius': '4px',
+                'marginBottom': '10px',
+                'textAlign': 'center'
+            }),
+            html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()])
             ], className="card", style={'width': '300px', 'border': '1px solid #FFFFFF','borderRadius': '8px'}))
         return html.Div([
-            html.H3("Détails des volumes d'anomalies", className="highlight"),
-            html.Div(volume_details, style={"display": "flex", "flexWrap": "wrap"}),
-            html.H3("Répartition des anomalies", className="highlight"),
-            html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap"})
+        html.H2("DÉTAILS DES VOLUMES D'ANOMALIES", className="page-title", style={
+            "marginTop": "10px",
+            "marginBottom": "25px",
+            "color": "#60A5FA",
+            "fontSize": "1em",
+            "fontWeight": "700",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.5px",
+            "textAlign": "center",
+            "borderBottom": "2px solid #334155",
+            "paddingBottom": "10px",
+            "backgroundColor": "rgba(96, 165, 250, 0.1)",
+            "borderRadius": "8px 8px 0 0",
+            "paddingTop": "10px",
+            "boxShadow": "0 2px 6px rgba(0, 0, 0, 0.1)"
+        }),
+        html.Div(volume_details, style={
+            "display": "flex",
+            "flexWrap": "wrap",
+            "justifyContent": "center",
+            "marginBottom": "30px"
+        }),
+        html.H2("RÉPARTITION DES ANOMALIES", className="page-title", style={
+        "marginTop": "30px",
+        "marginBottom": "25px",
+        "color": "#60A5FA",
+        "fontSize": "1em",
+        "fontWeight": "700",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.5px",
+        "textAlign": "center",
+        "borderBottom": "2px solid #334155",
+        "paddingBottom": "10px",
+        "backgroundColor": "rgba(96, 165, 250, 0.1)",
+        "borderRadius": "8px 8px 0 0",
+        "paddingTop": "10px",
+        "boxShadow": "0 2px 6px rgba(0, 0, 0, 0.1)"
+    }),
+    # Contenu des graphiques
+    html.Div(pie_charts, style={
+        "display": "flex",
+        "flexWrap": "wrap",
+        "justifyContent": "center"
+    })
         ])
+
 
     elif pathname == '/journal':
         selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
@@ -1031,7 +1298,20 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
 
     elif pathname == '/visual':
         if not selected_olt:
-            return html.Div([html.H4("Visualisation", className="highlight"), html.P("Veuillez sélectionner un réseau")])
+            return html.Div([
+                html.H2("VISUALISATION", className="page-title", style={
+                    "marginTop": "0",
+                    "color": "#60A5FA",
+                    "fontSize": "1.8em",
+                    "fontWeight": "700",
+                    "textTransform": "uppercase",
+                    "letterSpacing": "0.5px",
+                    "marginBottom": "20px",
+                    "borderBottom": "2px solid #334155",
+                    "paddingBottom": "10px"
+                }),
+                html.P("Veuillez sélectionner un réseau")
+            ])
         visual_start = selected_datetime - timedelta(hours=int(hours_back))
         olt_df = df[(df["olt_name"] == selected_olt) & (df["date_hour"] >= visual_start) & (df["date_hour"] <= selected_datetime)].sort_values("date_hour")
         return create_visual_content(olt_df, selected_olt, selected_anomaly_col)
@@ -1049,7 +1329,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
 def update_scenario_details(*args):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return html.H3("Sélectionnez un scénario pour voir les détails")
+        return html.H3("Séléctionnez un scénario pour voir les détails")
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     try:
         scenario_id = int(button_id.split("-")[-1])
