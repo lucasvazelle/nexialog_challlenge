@@ -5,7 +5,7 @@ Notre objectif est de construire un modèle de **détection d’anomalies sur le
 
 ---
 
-## Lancer l'application de détection d'anomalie
+## Lancer l'application de détection d'anomalies
 
 ### En local
 
@@ -32,7 +32,7 @@ $docker run lucasvazelle/nexialog
 
 ## Structure du projet
 
-#### `src.domain.Pre_traitement_data*' et 'src.sandbow.*'
+#### `src.domain.Pre_traitement_data*' et 'src.sandbox.*'
 - Preprocessing des données brutes: Nettoyage, vérifications, premières statistiques descriptives.
 
 ####`src.domain.Agregation_at_level_OLT_PEAG.ipynb'
