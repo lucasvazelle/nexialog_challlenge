@@ -192,13 +192,42 @@ def create_dashboard_content(historical_df, selected_anomaly_col):
 def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     if not selected_olt:
         return html.Div([
-            html.H2("Visualisation Réseau", className="page-title", style={"marginTop": "0"}),
+            html.H2("VISUALISATION DES ANOMALIES", className="page-title", style={
+            "marginTop": "0",
+            "color": "#60A5FA",
+            "fontSize": "1.8em",
+            "fontWeight": "700",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.5px",
+            "marginBottom": "20px",
+            "borderBottom": "2px solid #334155",
+            "paddingBottom": "10px"
+    }),
+    stats_cards,
             html.Div([
-                html.P("Veuillez sélectionner un OLT pour afficher les données", style={"color": "#CBD5E1"}),
-                html.Div(html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}),
-                         style={"textAlign": "center", "margin": "40px 0"})
-            ], style={"textAlign": "center", "padding": "40px"}, className="card")
-        ])
+                html.P("Veuillez séléctionner un OLT pour afficher les données", style={"color": "#CBD5E1", "fontSize": "1.2rem"}),
+                html.Div(
+                    html.I(className="fas fa-chart-line", style={"fontSize": "80px", "color": "#334155", "opacity": "0.7"}),
+                    style={"textAlign": "center", "margin": "40px 0"}
+                )
+            ], className="card", style={
+                "textAlign": "center",
+                "padding": "40px",
+                "width": "100%",
+                "border": "1px solid #334155",
+                "borderRadius": "8px",
+                "backgroundColor": "#1E293B",
+            })
+        ], style={
+            'backgroundColor': '#1E293B',
+            'padding': '20px',
+            'borderRadius': '8px',
+            'width': '100%',
+            'minHeight': '600px',
+            'border': '1px solid #334155',
+            'boxShadow': '0 4px 6px rgba(0, 0, 0, 0.1)'
+        })
+
 
     y_col = "avg_dns_time"
     metric_name = "DNS"
@@ -225,7 +254,7 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
 
     stats_cards = html.Div([
         html.Div([
-            html.H3("Réseau sélectionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
+            html.H3("Réseau séléctionné", style={"margin": "0", "color": "#94A3B8", "fontSize": "1rem"}),
             html.H2(f"{selected_olt}", style={"margin": "5px 0", "color": "#E2E8F0", "fontSize": "1.5rem"})
         ], className="card", style={"width": "250px",  'border': '0.5px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
@@ -347,17 +376,28 @@ def create_visual_content(olt_df, selected_olt, selected_anomaly_col):
     ], className="card", style={"width": "100%", "marginTop": "20px"})
 
     return html.Div([
-        html.H2("Visualisation Réseau", className="page-title", style={"marginTop": "0"}),
-        stats_cards,
-        html.Div([ dcc.Graph(figure=fig_ts, config={'displayModeBar': 'hover'}) ], className="card"),
-        html.Div([
-            html.Div([ dcc.Graph(figure=hist_fig, config={'displayModeBar': False}) ],
-                     className="card", style={"width": "calc(50% - 15px)"}),
-            html.Div([ dcc.Graph(figure=hour_fig, config={'displayModeBar': False}) ],
-                     className="card", style={"width": "calc(50% - 15px)"})
-        ], style={"display": "flex", "gap": "30px", "marginTop": "20px"}),
-        summary_card
-    ])
+    html.H2("VISUALISATION DES ANOMALIES", className="page-title", style={
+        "marginTop": "0",
+        "color": "#60A5FA",
+        "fontSize": "1.8em",
+        "fontWeight": "700",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.5px",
+        "marginBottom": "20px",
+        "borderBottom": "2px solid #334155",
+        "paddingBottom": "10px"
+    }),
+    stats_cards,
+    html.Div([ dcc.Graph(figure=fig_ts, config={'displayModeBar': 'hover'}) ], className="card"),
+    html.Div([
+        html.Div([ dcc.Graph(figure=hist_fig, config={'displayModeBar': False}) ],
+                className="card", style={"width": "calc(50% - 15px)"}),
+        html.Div([ dcc.Graph(figure=hour_fig, config={'displayModeBar': False}) ],
+                className="card", style={"width": "calc(50% - 15px)"})
+    ], style={"display": "flex", "gap": "30px", "marginTop": "20px"}),
+    summary_card
+])
+    
 
 def create_map_content(historical_df, selected_anomaly_col, start_datetime, selected_datetime, window_length_days):
     # Normalisation par jour pour la carte
@@ -378,7 +418,7 @@ def create_map_content(historical_df, selected_anomaly_col, start_datetime, sele
         ], className="card", style={"textAlign": "center", "width": "230px",  'border': '1px solid #FFFFFF','borderRadius': '8px'}),
         html.Div([
             html.H2(f"{dep_stats['nb_alertes'].max()}", style={"margin": "0", "color": "#38BDF8", "fontSize": "2.5rem"}),
-            html.P("Max anomalies dans un département", style={"margin": "0", "color": "#94A3B8"})
+            html.P("Max d'anomalies dans un département", style={"margin": "0", "color": "#94A3B8"})
         ], className="card", style={"textAlign": "center", "width": "280px",  'border': '1px solid #FFFFFF','borderRadius': '8px'})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
 
@@ -610,6 +650,12 @@ app.index_string = '''
             .header-right { text-align: right; }
             .nav-bar { display: flex; gap: 5px; justify-content: flex-end; }
             .nav-bar a { color: #CBD5E1; text-decoration: none; font-size: 1.05em; font-weight: 600; transition: all 0.2s; padding: 10px 20px; border-radius: 8px 8px 0 0; text-transform: uppercase; letter-spacing: 0.5px; position: relative; }
+            
+            #tab-visual {
+            padding-left: 30px !important;
+            padding-right: 30px !important;
+            }
+
             .nav-bar a:hover { color: #38BDF8; background-color: rgba(15, 23, 42, 0.3); }
             .nav-bar a.active { color: #38BDF8; background-color: #0F172A; border-bottom: 3px solid #38BDF8; }
             main { flex: 1; padding: 30px; }
@@ -948,7 +994,7 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='boucle-filter',
                     options=boucle_options,
-                    placeholder="Sélectionnez une Boucle",
+                    placeholder="Séléctionnez une Boucle",
                     multi=True,
                     className="filter-dropdown"
                 ),
@@ -956,18 +1002,18 @@ app.layout = html.Div([
                 dcc.Dropdown(
                     id='olt-type-filter',
                     options=olt_type_options,
-                    placeholder="Sélectionnez un Type OLT",
+                    placeholder="Séléctionnez un type d'OLT",
                     multi=True,
                     className="filter-dropdown"
                 )
             ], id="journal-filters", style={"display": "none"}, className="filter-panel"),
             html.Div([
-                html.H3("Sélection réseau", className="left-panel-title", style={"marginTop": "20px"}),
+                html.H3("Séléction réseau", className="left-panel-title", style={"marginTop": "20px"}),
                 html.H4("Réseau", className="filter-category"),
                 dcc.Dropdown(
                     id='olt-picker',
                     options=[],
-                    placeholder="Sélectionnez un réseau",
+                    placeholder="Séléctionnez un réseau",
                     className="filter-dropdown"
                 )
             ], id="olt-visual-controls", style={"display": "none"}, className="filter-panel")
@@ -1064,7 +1110,7 @@ scenario_layout = html.Div([
             html.Div(
                 id="scenario-details",
                 children=[
-                    html.H3("Sélectionnez un scénario pour voir les détails",
+                    html.H3("Séléctionnez un scénario pour voir les détails",
                             className="section-title",
                             style={"paddingBottom": "10px"})
                 ],
@@ -1150,11 +1196,52 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
                 html.Ul([html.Li(f"{row[attr]} : {row['nb_alertes']} alertes") for _, row in top_items.iterrows()])
             ], className="card", style={'width': '300px', 'border': '1px solid #FFFFFF','borderRadius': '8px'}))
         return html.Div([
-            html.H3("Détails des volumes d'anomalies", className="highlight"),
-            html.Div(volume_details, style={"display": "flex", "flexWrap": "wrap"}),
-            html.H3("Répartition des anomalies", className="highlight"),
-            html.Div(pie_charts, style={"display": "flex", "flexWrap": "wrap"})
+        html.H2("DÉTAILS DES VOLUMES D'ANOMALIES", className="page-title", style={
+            "marginTop": "10px",
+            "marginBottom": "25px",
+            "color": "#60A5FA",
+            "fontSize": "1.3em",
+            "fontWeight": "700",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.5px",
+            "textAlign": "center",
+            "borderBottom": "2px solid #334155",
+            "paddingBottom": "10px",
+            "backgroundColor": "rgba(96, 165, 250, 0.1)",
+            "borderRadius": "8px 8px 0 0",
+            "paddingTop": "10px",
+            "boxShadow": "0 2px 6px rgba(0, 0, 0, 0.1)"
+        }),
+        html.Div(volume_details, style={
+            "display": "flex", 
+            "flexWrap": "wrap", 
+            "justifyContent": "center", 
+            "marginBottom": "30px"
+        }),
+        html.H2("RÉPARTITION DES ANOMALIES", className="page-title", style={
+        "marginTop": "30px",
+        "marginBottom": "25px",
+        "color": "#60A5FA",
+        "fontSize": "1.3em",
+        "fontWeight": "700",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.5px",
+        "textAlign": "center",
+        "borderBottom": "2px solid #334155",
+        "paddingBottom": "10px",
+        "backgroundColor": "rgba(96, 165, 250, 0.1)",
+        "borderRadius": "8px 8px 0 0",
+        "paddingTop": "10px",
+        "boxShadow": "0 2px 6px rgba(0, 0, 0, 0.1)"
+    }),
+    # Contenu des graphiques
+    html.Div(pie_charts, style={
+        "display": "flex", 
+        "flexWrap": "wrap", 
+        "justifyContent": "center"
+    })
         ])
+       
 
     elif pathname == '/journal':
         selected_datetime = datetime.combine(pd.to_datetime(date_str).date(), time(int(hour)))
@@ -1176,11 +1263,24 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
 
     elif pathname == '/visual':
         if not selected_olt:
-            return html.Div([html.H4("Visualisation", className="highlight"), html.P("Veuillez sélectionner un réseau")])
+            return html.Div([
+                html.H2("VISUALISATION", className="page-title", style={
+                    "marginTop": "0",
+                    "color": "#60A5FA",
+                    "fontSize": "1.8em",
+                    "fontWeight": "700",
+                    "textTransform": "uppercase",
+                    "letterSpacing": "0.5px",
+                    "marginBottom": "20px",
+                    "borderBottom": "2px solid #334155",
+                    "paddingBottom": "10px"
+                }),
+                html.P("Veuillez sélectionner un réseau")
+            ])
         visual_start = selected_datetime - timedelta(hours=int(hours_back))
         olt_df = df[(df["olt_name"] == selected_olt) & (df["date_hour"] >= visual_start) & (df["date_hour"] <= selected_datetime)].sort_values("date_hour")
         return create_visual_content(olt_df, selected_olt, selected_anomaly_col)
-
+                
     elif pathname == '/scenario-builder':
         return scenario_layout
 
@@ -1194,7 +1294,7 @@ def display_page(pathname, date_str, hour, hours_back, anomaly_type, anomaly_met
 def update_scenario_details(*args):
     ctx = dash.callback_context
     if not ctx.triggered:
-        return html.H3("Sélectionnez un scénario pour voir les détails")
+        return html.H3("Séléctionnez un scénario pour voir les détails")
     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
     try:
         scenario_id = int(button_id.split("-")[-1])
