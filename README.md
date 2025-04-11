@@ -29,6 +29,9 @@ $ docker pull lucasvazelle/nexialog
 $docker run nexialog
 $docker run lucasvazelle/nexialog
 
+    ### Sur le web
+
+https://nexialogchallenge-212301858764.us-central1.run.app
 
 ## Structure du projet
 

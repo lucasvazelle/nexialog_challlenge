@@ -43,8 +43,8 @@ scenarios = [
 # 2. Chargement des données depuis les deux sources
 def load_data_sources():
     # Charger les deux fichiers Parquet
-    df_olt = pd.read_parquet("../data/data_with_anomalies_OLT_with_jump_and_DB_SCAN.parquet")
-    df_peag = pd.read_parquet("../data/data_with_anomalies_PEAG_with_jump_and_DB_SCAN.parquet")
+    df_olt = pd.read_parquet("../../../data/data_with_anomalies_OLT_with_jump_and_DB_SCAN.parquet")
+    df_peag = pd.read_parquet("../../../data/data_with_anomalies_PEAG_with_jump_and_DB_SCAN.parquet")
 
     # Liste des colonnes à retirer
     columns_to_drop = [
